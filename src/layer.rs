@@ -50,14 +50,6 @@ impl<A: Activation> DenseLayer<A> {
     }
 }
 
-// impl<A> Grad for DenseLayer<A> where A: Activation{
-//     fn grad(&self, output: &Array2<f64>) -> Array2<f64> {
-//         self.activation.grad(output);
-//         self.weights.grad(output);
-//         self.biases.grad(output)
-//     }
-// }
-
 impl<A: Activation> DenseLayer<A> {
     pub fn forward(&self, inputs: Array2<f64>) -> Array2<f64> {
         let inputs_mat = inputs
@@ -69,11 +61,12 @@ impl<A: Activation> DenseLayer<A> {
     }
 
     pub fn backprop(&self, output: &Array2<f64>) -> (Array2<f64>, Array2<f64>, Array2<f64>) {
+        // Calculate gradient with respect to activation function
         let activation_gradient = self.activation.grad(output);
-        // .expect("Activation gradient must be 2D for dot product");
 
         // Calculate gradient with respect to weights
         let weight_gradient = self.weights.grad(output);
+
         // Calculate gradient with respect to biases
         let bias_gradient = self.biases.grad(output);
 
@@ -179,12 +172,14 @@ mod test_layer {
         let expected_weight_gradient = arr2(&[[1.0, -1.0], [2.0, 3.0]]); // FIXME - Update when implemented
         let expected_bias_gradient = arr2(&[[1.0, -1.0], [2.0, 3.0]]); // FIXME - Update when implemented
 
-        println!("Weight: {}, Bias: {}, Activation: {}", weight_gradient, bias_gradient, activation_gradient);
-        
+        println!(
+            "Weight: {}, Bias: {}, Activation: {}",
+            weight_gradient, bias_gradient, activation_gradient
+        );
+
         let activation_gradient_diffs = expected_activation_gradient - activation_gradient;
         let weight_gradient_diffs = expected_weight_gradient - weight_gradient;
         let bias_gradient_diffs = expected_bias_gradient - bias_gradient;
-
 
         for x in activation_gradient_diffs {
             assert_abs_diff_eq!(x, 0.0, epsilon = 1e-6);
