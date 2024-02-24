@@ -39,7 +39,7 @@ mod test_loss_functions {
     #[test]
     fn test_mse() {
         let predictions = Array2::from_elem([1, 5], 3.0);
-        let targets = Array2::from_elem([1,5], 1.0);
+        let targets = Array2::from_elem([1, 5], 1.0);
 
         let mse = LossFunction::MeanSquaredError;
         let result = mse.calculate(&predictions, &targets);
@@ -50,7 +50,7 @@ mod test_loss_functions {
     #[test]
     fn test_mae() {
         let predictions = Array2::from_elem([1, 5], 2.0);
-        let targets = Array2::from_elem([1,5], 1.0);
+        let targets = Array2::from_elem([1, 5], 1.0);
 
         let mae = LossFunction::MeanAbsoluteError;
         let result = mae.calculate(&predictions, &targets);
