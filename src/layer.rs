@@ -87,7 +87,7 @@ impl DenseLayer {
 
 
 #[cfg(test)]
-mod tests {
+mod test_layer {
     use super::*;
     use ndarray::arr2;
     use approx::assert_abs_diff_eq;
