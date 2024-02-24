@@ -1,18 +1,18 @@
-use crate::{activation::Activation, layer::DenseLayer};
+use crate::{activation::Activation, layer::DenseLayer, loss::Loss};
 use ndarray::Array2;
 
-pub struct Network<A: Activation> {
-    layers: Vec<DenseLayer<A>>,
+pub struct Network<A: Activation, L: Loss> {
+    layers: Vec<DenseLayer<A, L>>,
     // Properties for loss functions and optimizers
 }
 
-impl<A: Activation> Default for Network<A> {
+impl<A: Activation, L: Loss> Default for Network<A, L> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<A: Activation> Network<A> {
+impl<A: Activation, L: Loss> Network<A, L> {
     pub fn new() -> Self {
         Network {
             layers: Vec::new(),
@@ -20,7 +20,7 @@ impl<A: Activation> Network<A> {
         }
     }
 
-    pub fn add_layer(&mut self, layer: DenseLayer<A>) {
+    pub fn add_layer(&mut self, layer: DenseLayer<A, L>) {
         self.layers.push(layer);
     }
 

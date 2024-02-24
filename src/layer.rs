@@ -45,20 +45,39 @@ impl<A: Activation, L: Loss> DenseLayer<A, L> {
         self.activation.activate(linear_output)
     }
 
-    pub fn backprop(&self, input: &Array2<f64>, output: &Array2<f64>, target: &Array2<f64>) -> (Array2<f64>, Array2<f64>) {
-        // Calculate gradient with respect to activation function
-        let output_gradient = self.calculate_output_gradient(output, target, &self.loss);
+    pub fn backprop(
+        &self,
+        input: &Array2<f64>,
+        output: &Array2<f64>,
+        target: &Array2<f64>,
+    ) -> (Array2<f64>, Array2<f64>, Array2<f64>) {
+        // Calculate output gradient with respect to loss function
+        let loss_gradient = self.calculate_output_gradient(output, target, &self.loss);
+
+        // Apply the derivative of the activation function to the loss gradient
+        // This requires calculating the pre-activated output (Z) again, which is not ideal. Consider storing Z during the forward pass if possible.
+        let linear_output = input.dot(&self.weights.data) + &self.biases.data;
+        let activation_gradient = self.activation.calculate_gradient(&linear_output);
+        let output_gradient = loss_gradient * activation_gradient;
 
         // Calculate gradient with respect to weights
-        let weight_gradient = self.grad_weights(&input, &output_gradient);
+        let weight_gradient = self.grad_weights(input, &output_gradient);
 
         // Calculate gradient with respect to biases
         let bias_gradient = self.grad_biases(&output_gradient);
 
-        (weight_gradient, bias_gradient)
+        // Optionally, calculate gradient with respect to input for backpropagation through previous layers
+        let input_gradient = self.grad_input(&output_gradient);
+
+        (weight_gradient, bias_gradient, input_gradient)
     }
 
-    pub fn calculate_output_gradient(&self, predictions: &Array2<f64>, targets: &Array2<f64>, loss_function: &dyn Loss) -> Array2<f64> {
+    pub fn calculate_output_gradient(
+        &self,
+        predictions: &Array2<f64>,
+        targets: &Array2<f64>,
+        loss_function: &dyn Loss,
+    ) -> Array2<f64> {
         loss_function.calculate_gradient(predictions, targets)
     }
 
@@ -175,18 +194,16 @@ mod test_layer {
 
         // Define a test input and a mock output gradient (as if coming from the next layer)
         let input = arr2(&[[1.0, -1.0], [2.0, 3.0]]);
-        let output = layer.forward(input);
+        let output = layer.forward(input.clone());
         let targets = arr2(&[[2.0, 1.0]]);
-        let (weight_gradient, bias_gradient) = layer.backprop(&input ,&output, &targets);
+        let (weight_gradient, bias_gradient, _input_gradient) =
+            layer.backprop(&input, &output, &targets);
 
-        let expected_activation_gradient = arr2(&[[1.0, 0.1], [1.0, 1.0]]);
-        let expected_weight_gradient = arr2(&[[1.0, -1.0], [2.0, 3.0]]); // FIXME - Update when implemented
-        let expected_bias_gradient = arr2(&[[1.0, -1.0], [2.0, 3.0]]); // FIXME - Update when implemented
+        let _expected_input_gradient = arr2(&[[1.0, 0.1], [1.0, 1.0]]);
+        let expected_weight_gradient = arr2(&[[-0.7, -1.046], [3.7, 0.431]]); // FIXME - Update when implemented
+        let expected_bias_gradient = arr2(&[[-1.3, -0.923]]); // FIXME - Update when implemented
 
-        println!(
-            "Weight: {}, Bias: {}",
-            weight_gradient, bias_gradient
-        );
+        println!("Weight: {}, Bias: {}", weight_gradient, bias_gradient);
 
         let weight_gradient_diffs = expected_weight_gradient - weight_gradient;
         let bias_gradient_diffs = expected_bias_gradient - bias_gradient;
