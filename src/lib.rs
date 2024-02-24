@@ -1,5 +1,7 @@
+pub mod activation;
+pub mod gradient;
 pub mod layer;
-pub mod network;
 pub mod loss;
-pub mod utils;
+pub mod network;
 pub mod optimizer;
+pub mod utils;
