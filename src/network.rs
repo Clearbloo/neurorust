@@ -6,6 +6,12 @@ pub struct Network<A: Activation> {
     // Properties for loss functions and optimizers
 }
 
+impl<A: Activation> Default for Network<A> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<A: Activation> Network<A> {
     pub fn new() -> Self {
         Network {
