@@ -1,0 +1,87 @@
+struct Layer {
+    input_dim: usize,
+    output_dim: usize,
+    activation: ActivationFunction,
+    inputs: Vec<f32>,
+    outputs: Vec<f32>,
+    weights: Vec<Vec<f32>>, // Fully connected layer
+    biases: Vec<f32>,
+}
+
+enum ActivationFunction {
+    ReLU,
+    Sigmoid,
+}
+
+impl Layer {
+    fn new(input_dim: usize, output_dim: usize, activation: ActivationFunction) -> Self {
+        let mut rng = rand::thread_rng();
+        let weights = (0..output_dim)
+            .map(|_| (0..input_dim).map(|_| rng.gen_range(-0.1..0.1)).collect())
+            .collect();
+        let biases = (0..output_dim).map(|_| 0.0).collect();
+
+        Layer {
+            input_dim,
+            output_dim,
+            activation,
+            inputs: vec![],
+            outputs: vec![],
+            weights,
+            biases,
+        }
+    }
+
+
+    fn activate(&self, input: f32) -> f32 {
+        match self.activation {
+            ActivationFunction::ReLU => if input > 0.0 { input } else { 0.0 },
+            ActivationFunction::Sigmoid => 1.0 / (1.0 + (-input).exp()),
+        }
+    }
+    
+    // TODO - Implement
+    fn gradient(&self, error: Vec<f32>) -> Vec<f32> {
+        error
+    }
+
+    // Feedforward function that calculates the layer's output
+    fn feedforward(&mut self, inputs: Vec<f32>) {
+        self.inputs = inputs;
+        let mut outputs = vec![0.0; self.neurons];
+        for (i, output) in outputs.iter_mut().enumerate() {
+            *output = self.inputs.iter().zip(self.weights[i].iter())
+                .map(|(input, weight)| input * weight)
+                .sum::<f32>() + self.biases[i];
+            *output = self.activate(*output);
+        }
+        self.outputs = outputs;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_activation_relu() {
+        let layer = Layer::new(1, 2, ActivationFunction::ReLU);
+        assert_eq!(layer.activate(0.5), 0.5);
+        assert_eq!(layer.activate(-0.5), 0.0);
+    }
+
+    #[test]
+    fn test_activation_sigmoid() {
+        let layer = Layer::new(1, 2, ActivationFunction::Sigmoid);
+        let result = layer.activate(0.0);
+        assert!(result > 0.49 && result < 0.51); // Sigmoid(0) = 0.5
+    }
+
+    #[test]
+    fn test_feedforward() {
+        let layer = Layer::new(3, 1, ActivationFunction::Sigmoid);
+        let inputs = vec![1,2,3];
+        let result = layer.feedforward(inputs);
+        assert!(result > 0.49 && result < 0.51); // Sigmoid(0) = 0.5
+    }
+}
