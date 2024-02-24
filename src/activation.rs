@@ -41,3 +41,17 @@ impl Activation for Sigmoid {
         input.mapv(|x| 1.0 / (1.0 + (-x).exp()))
     }
 }
+
+#[cfg(test)]
+mod test_activations {
+    use super::{Activation, ReLU};
+    use ndarray::arr2;
+
+    #[test]
+    fn test_relu() {
+        let relu = ReLU;
+        let input = arr2(&[[1.0, -2.0], [2.0, -3.0]]);
+        let result = relu.activate(input);
+        assert_eq!(result, arr2(&[[1.0, 0.0], [2.0, 0.0]]))
+    }
+}
