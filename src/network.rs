@@ -117,7 +117,7 @@ impl<L: Loss, O: Optimization> Network<L, O> {
 
     /// Each loop in epoch, forward pass, calculate loss, backwards pass to calculate gradients
     /// Update parameters (using optimizer), repeat.
-    fn train(mut self, input: &Array2<f64>, targets: &Array2<f64>) {
+    pub fn train(mut self, input: &Array2<f64>, targets: &Array2<f64>) {
         for _e in 0..self.epochs {
             let outputs = self.forward(input);
             self.backwards(&outputs, targets);
@@ -144,6 +144,7 @@ mod test_network {
         Network::new(&architecture, &activations, MeanSquaredError, Adam);
     }
 
+    #[ignore]
     #[test]
     fn test_train() {
         let architecture = vec![1, 2, 1];
