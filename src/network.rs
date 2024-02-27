@@ -2,7 +2,6 @@ use crate::{activation::Activation, layer::DenseLayer, loss::Loss, optimizer::Op
 use ndarray::Array2;
 use std::sync::Arc;
 
-
 pub struct Network<L: Loss, O: Optimization> {
     layers: Vec<DenseLayer>,
     loss: L,
@@ -89,7 +88,8 @@ impl<L: Loss, O: Optimization> Network<L, O> {
 
         for (i, layer) in self.layers.iter_mut().enumerate().rev() {
             let input = &inputs_for_layers[i];
-            let (weight_gradient, bias_gradient, input_gradient) = layer.grad_layer(input, &output_gradient);
+            let (weight_gradient, bias_gradient, input_gradient) =
+                layer.grad_layer(&output_gradient);
             weight_updates.push(weight_gradient);
             bias_updates.push(bias_gradient);
 
@@ -98,11 +98,14 @@ impl<L: Loss, O: Optimization> Network<L, O> {
 
         // Apply collected updates
         self.update_parameters(weight_updates, bias_updates);
-            todo!()
-
+        todo!()
     }
 
-    fn update_parameters(&mut self, weight_updates: Vec<Array2<f64>>, bias_updates: Vec<Array2<f64>>) {
+    fn update_parameters(
+        &mut self,
+        weight_updates: Vec<Array2<f64>>,
+        bias_updates: Vec<Array2<f64>>,
+    ) {
         // TODO - Can probably just delete this method
         self.optimizer.apply_updates(weight_updates, bias_updates)
     }
@@ -113,7 +116,6 @@ impl<L: Loss, O: Optimization> Network<L, O> {
         // Return the input Array2<f64> for the specified layer.
         self.layers[layer_index].input.clone()
     }
-    
 
     /// Each loop in epoch, forward pass, calculate loss, backwards pass to calculate gradients
     /// Update parameters (using optimizer), repeat.
