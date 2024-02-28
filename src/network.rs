@@ -40,7 +40,7 @@ impl<L: Loss, O: Optimization> Network<L, O> {
             layers,
             loss,
             optimizer,
-            epochs: 100,
+            epochs: 10,
         }
     }
 
@@ -58,7 +58,6 @@ impl<L: Loss, O: Optimization> Network<L, O> {
     // updating weights and biases based on the gradient of the loss function with respect to the output.
     pub fn backward(&mut self, error: Array2<f64>) {
         println!("{}", error);
-        todo!();
     }
 
     pub fn calculate_loss_gradient(
@@ -71,13 +70,6 @@ impl<L: Loss, O: Optimization> Network<L, O> {
 
     /// Performs backpropagation to update weights and biases of all layers.
     pub fn backwards(&mut self, outputs: &Array2<f64>, targets: &Array2<f64>) {
-        let mut inputs_for_layers = Vec::new();
-
-        // Precompute inputs for each layer
-        for (i, _) in self.layers.iter().enumerate() {
-            inputs_for_layers.push(self.get_input_for_layer(i));
-        }
-
         // Now, iterate over layers with mutable access
         let loss_gradient = self.calculate_loss_gradient(outputs, targets);
         let mut output_gradient: Array2<f64> = loss_gradient; // This should be initialized with the gradient of the loss function w.r.t the output of the last layer.
@@ -86,8 +78,7 @@ impl<L: Loss, O: Optimization> Network<L, O> {
         let mut weight_updates: Vec<Array2<f64>> = Vec::new();
         let mut bias_updates: Vec<Array2<f64>> = Vec::new();
 
-        for (i, layer) in self.layers.iter_mut().enumerate().rev() {
-            let input = &inputs_for_layers[i];
+        for layer in self.layers.iter_mut().rev() {
             let (weight_gradient, bias_gradient, input_gradient) =
                 layer.grad_layer(&output_gradient);
             weight_updates.push(weight_gradient);
@@ -98,7 +89,6 @@ impl<L: Loss, O: Optimization> Network<L, O> {
 
         // Apply collected updates
         self.update_parameters(weight_updates, bias_updates);
-        todo!()
     }
 
     fn update_parameters(
@@ -112,7 +102,7 @@ impl<L: Loss, O: Optimization> Network<L, O> {
 
     /// Gets the input for a specific layer.
     /// This is a placeholder for however you decide to implement it.
-    fn get_input_for_layer(&self, layer_index: usize) -> Array2<f64> {
+    pub fn get_input_for_layer(&self, layer_index: usize) -> Array2<f64> {
         // Return the input Array2<f64> for the specified layer.
         self.layers[layer_index].input.clone()
     }
@@ -146,7 +136,6 @@ mod test_network {
         Network::new(&architecture, &activations, MeanSquaredError, Adam);
     }
 
-    #[ignore]
     #[test]
     fn test_train() {
         let architecture = vec![1, 2, 1];
