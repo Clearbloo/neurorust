@@ -24,7 +24,7 @@ impl DenseLayer {
     pub fn new(input_dim: usize, output_dim: usize, activation: Arc<dyn Activation>) -> Self {
         let mut rng = rand::thread_rng();
         let weights = Weights {
-            data: Array2::from_shape_fn((input_dim, output_dim), |_| rng.gen_range(-1.0..1.0)),
+            data: Array2::from_shape_fn((output_dim, input_dim), |_| rng.gen_range(-1.0..1.0)),
         };
         let biases = Biases {
             data: Array2::zeros((output_dim, 1)),
@@ -91,7 +91,8 @@ impl DenseLayer {
 
     // Optionally, if you need to compute the gradient with respect to the input for backpropagation
     pub fn grad_input(&self, activation_gradient: &Array2<f64>) -> Array2<f64> {
-        self.weights.data.dot(activation_gradient)
+        let input_grad = activation_gradient.t().dot(&self.weights.data);
+        input_grad.t().to_owned()
     }
 }
 
@@ -177,7 +178,7 @@ mod test_layer {
             &loss, // &target
         );
 
-        let expected_input_gradient = arr2(&[[0.5, 0.5]]);
+        let expected_input_gradient = arr2(&[[1.0], [0.0]]);
         let expected_weight_gradient = arr2(&[[1.0, -1.0], [1.0, -1.0]]); // FIXME - Update when implemented
         let expected_bias_gradient = arr2(&[[1.0, 1.0]]); // FIXME - Update when implemented
 
