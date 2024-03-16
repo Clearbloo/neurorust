@@ -161,7 +161,6 @@ mod test_network {
         net.train(&input, &targets)
     }
 
-    #[ignore]
     #[test]
     fn test_train_updates_network_outputs() {
         let architecture = vec![1, 2, 1];
