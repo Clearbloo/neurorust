@@ -47,6 +47,9 @@ mod test_activations {
         let relu = ReLU;
         let input = arr2(&[[1.0, -2.0], [2.0, -3.0]]);
         let result = relu.activate(input);
-        assert_eq!(result, arr2(&[[1.0, 0.0], [2.0, 0.0]]))
+        assert_eq!(result, arr2(&[[1.0, 0.0], [2.0, 0.0]]));
+
+        let act_grad = relu.calculate_gradient(&result);
+        assert_eq!(act_grad, arr2(&[[1.0, 0.0], [1.0, 0.0]]));
     }
 }

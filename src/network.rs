@@ -56,9 +56,9 @@ impl<L: Loss, O: Optimization> Network<L, O> {
 
     // This method should implement the logic to perform a backward pass through the network,
     // updating weights and biases based on the gradient of the loss function with respect to the output.
-    pub fn backward(&mut self, error: Array2<f64>) {
-        println!("{}", error);
-    }
+    // pub fn backward(&mut self, error: Array2<f64>) {
+    //     println!("{}", error);
+    // }
 
     pub fn calculate_loss_gradient(
         &self,
@@ -69,7 +69,7 @@ impl<L: Loss, O: Optimization> Network<L, O> {
     }
 
     /// Performs backpropagation to update weights and biases of all layers.
-    pub fn backwards(&mut self, outputs: &Array2<f64>, targets: &Array2<f64>) {
+    pub fn backwards(&mut self, outputs: &Array2<f64>, targets: &Array2<f64>) -> (Vec<Array2<f64>>, Vec<Array2<f64>>) {
         // Now, iterate over layers with mutable access
         let loss_gradient = self.calculate_loss_gradient(outputs, targets);
         let mut output_gradient: Array2<f64> = loss_gradient; // This should be initialized with the gradient of the loss function w.r.t the output of the last layer.
@@ -87,17 +87,19 @@ impl<L: Loss, O: Optimization> Network<L, O> {
             output_gradient = input_gradient; // Prepare for the next iteration
         }
 
-        // Apply collected updates
-        self.update_parameters(weight_updates, bias_updates);
+        (weight_updates, bias_updates)
+
     }
 
     fn update_parameters(
         &mut self,
         weight_updates: Vec<Array2<f64>>,
         bias_updates: Vec<Array2<f64>>,
-    ) {
+    ) -> &mut Network<L, O> {
         // TODO - Can probably just delete this method
-        self.optimizer.apply_updates(weight_updates, bias_updates)
+        self.optimizer
+            .apply_updates(&mut self.layers, &weight_updates, &bias_updates);
+        self
     }
 
     /// Gets the input for a specific layer.
@@ -109,10 +111,11 @@ impl<L: Loss, O: Optimization> Network<L, O> {
 
     /// Each loop in epoch, forward pass, calculate loss, backwards pass to calculate gradients
     /// Update parameters (using optimizer), repeat.
-    pub fn train(mut self, input: &Array2<f64>, targets: &Array2<f64>) {
+    pub fn train(&mut self, input: &Array2<f64>, targets: &Array2<f64>) {
         for _e in 0..self.epochs {
             let outputs = self.forward(input);
-            self.backwards(&outputs, targets);
+            let (weight_updates, bias_updates) = self.backwards(&outputs, targets);
+            self.update_parameters(weight_updates, bias_updates);
         }
     }
 }
@@ -124,7 +127,7 @@ mod test_network {
     use crate::{
         activation::{LeakyReLU, ReLU},
         loss::MeanSquaredError,
-        optimizer::Adam,
+        optimizer::{Adam, SGD},
     };
 
     use super::*;
@@ -133,18 +136,60 @@ mod test_network {
     fn test_init() {
         let architecture = vec![1, 2, 1];
         let activations: Vec<Arc<dyn Activation>> = vec![Arc::new(ReLU {}), Arc::new(LeakyReLU {})];
-        Network::new(&architecture, &activations, MeanSquaredError, Adam);
+        Network::new(
+            &architecture,
+            &activations,
+            MeanSquaredError,
+            Adam { lr: 0.001 },
+        );
     }
 
     #[test]
     fn test_train() {
         let architecture = vec![1, 2, 1];
         let activations: Vec<Arc<dyn Activation>> = vec![Arc::new(ReLU {}), Arc::new(LeakyReLU {})];
-        let net = Network::new(&architecture, &activations, MeanSquaredError, Adam);
+        let mut net = Network::new(
+            &architecture,
+            &activations,
+            MeanSquaredError,
+            Adam { lr: 0.001 },
+        );
 
         let input = arr2(&[[1.0]]);
         let targets = arr2(&[[2.0]]);
 
         net.train(&input, &targets)
     }
+
+    #[test]
+    fn test_train_updates_network_outputs() {
+        let architecture = vec![1, 2, 1];
+        let activations: Vec<Arc<dyn Activation>> = vec![Arc::new(ReLU {}), Arc::new(LeakyReLU {})];
+        let mut net = Network::new(
+            &architecture,
+            &activations,
+            MeanSquaredError,
+            SGD { lr: 0.001 },
+        );
+
+        let input = arr2(&[[1.0]]);
+        let targets = arr2(&[[2.0]]);
+
+        // Capture the initial output before training
+        let initial_output = net.forward(&input);
+
+        // Train the network
+        net.train(&input, &targets);
+
+        // Capture the output after training
+        let trained_output = net.forward(&input);
+
+        // Example assertion: check if the trained output is closer to the targets than the initial output
+        // This requires calculating the loss for both and comparing them
+        let initial_loss = MeanSquaredError.calculate_loss(&initial_output, &targets);
+        let trained_loss = MeanSquaredError.calculate_loss(&trained_output, &targets);
+
+        assert!(trained_loss < initial_loss, "Training should reduce the loss");
+    }
+
 }

@@ -79,20 +79,29 @@ impl DenseLayer {
 
     // Compute gradient of the loss with respect to weights
     pub fn grad_weights(&self, activation_gradient: &Array2<f64>) -> Array2<f64> {
-        println!("activation gradient: {:?}", activation_gradient);
-        println!("input: {:?}", self.input);
-        activation_gradient.dot(&self.input.t())
+        // println!("activation gradient: {:?}", activation_gradient);
+        // println!("input: {:?}", self.input);
+        let grad_weights_updates = &self.input.dot(activation_gradient);
+        // println!("grad weights updates: {:?}", grad_weights_updates);
+        // println!("weights: {:?}", self.weights.data);
+        grad_weights_updates.to_owned()
+
     }
 
     // Compute gradient of the loss with respect to biases
     pub fn grad_biases(&self, activation_gradient: &Array2<f64>) -> Array2<f64> {
-        activation_gradient.clone() //.sum_axis(Axis(0)).insert_axis(Axis(0))
+        println!("grad bias updates: {:?}", activation_gradient.t());
+        println!("biases: {:?}", self.biases.data);
+        activation_gradient.t().to_owned() //.sum_axis(Axis(0)).insert_axis(Axis(0))
     }
 
     // Optionally, if you need to compute the gradient with respect to the input for backpropagation
     pub fn grad_input(&self, activation_gradient: &Array2<f64>) -> Array2<f64> {
-        let input_grad = activation_gradient.t().dot(&self.weights.data);
-        input_grad.t().to_owned()
+        let input_grad = activation_gradient.dot(&self.weights.data);
+        // println!("GRAD INPUT\nInput: {:?}", self.input);
+        // println!("Input grad: {:?}", input_grad);
+        input_grad
+
     }
 }
 
@@ -105,6 +114,7 @@ mod test_layer {
 
     #[test]
     fn test_dense_layer_forward() {
+        // ReLU
         let mut layer = DenseLayer::new(2, 2, Arc::new(ReLU {}));
         layer.weights = Weights {
             data: arr2(&[[0.5, -0.5], [0.5, -0.5]]),
@@ -118,11 +128,7 @@ mod test_layer {
         let expected_output = arr2(&[[2.6], [0.0]]);
 
         assert_eq!(output, expected_output);
-    }
 
-    #[test]
-    fn test_forward() {
-        // ReLU
         let mut layer = DenseLayer::new(2, 2, Arc::new(ReLU {}));
         layer.weights = Weights {
             data: arr2(&[[0.5, -0.5], [0.5, -0.5]]),
@@ -171,19 +177,19 @@ mod test_layer {
         // Define a test input and a mock output gradient (as if coming from the next layer)
         let input = arr2(&[[1.0], [-1.0]]);
         let output = layer.forward(&input);
-        println!("Output: {}", output);
-        let loss = arr2(&[[1.0], [1.0]]);
+        println!("Output:\n {:#?}", output);
+        let mock_input_grad_of_next_layer = arr2(&[[1.0, 1.0]]);
         // let targets = arr2(&[[2.0, 1.0]]);
         let (weight_gradient, bias_gradient, input_gradient) = layer.grad_layer(
-            &loss, // &target
+            &mock_input_grad_of_next_layer,
         );
 
-        let expected_input_gradient = arr2(&[[1.0], [0.0]]);
-        let expected_weight_gradient = arr2(&[[1.0, -1.0], [1.0, -1.0]]); // FIXME - Update when implemented
-        let expected_bias_gradient = arr2(&[[1.0, 1.0]]); // FIXME - Update when implemented
+        let expected_weight_gradient = arr2(&[[1.0, 1.0], [-1.0, -1.0]]); // FIXME - Update when implemented
+        let expected_bias_gradient = arr2(&[[1.0], [1.0]]); // FIXME - Update when implemented
+        let expected_input_gradient = arr2(&[[1.0, 0.0]]);
 
         println!(
-            "Weight grad:\n {:?},\n Bias grad:\n {:?},\n Input grad: {:?}",
+            "Weight grad:\n {:#?},\n Bias grad:\n {:#?},\n Input grad: {:#?}",
             weight_gradient, bias_gradient, input_gradient
         );
 
@@ -200,5 +206,10 @@ mod test_layer {
         for x in input_gradient_diffs {
             assert_abs_diff_eq!(x, 0.0, epsilon = 1e-6);
         }
+    }
+
+    #[test]
+    fn test_bias_update() {
+
     }
 }
