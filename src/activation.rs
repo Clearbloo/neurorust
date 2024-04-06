@@ -1,4 +1,3 @@
-// use crate::gradient::Grad;
 use ndarray::Array2;
 
 pub trait Activation {
