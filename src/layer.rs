@@ -50,8 +50,8 @@ impl DenseLayer {
     }
 
     pub fn forward(&mut self, input: &Array2<f64>) -> Array2<f64> {
-        let linear_output = self.weights.data.dot(input) + &self.biases.data;
-
+        let wx: Array2<f64> = self.weights.data.dot(input);
+        let linear_output = &wx + &self.biases.data;
         // Store input to this layer
         self.input = input.clone();
 
@@ -114,6 +114,17 @@ mod test_layer {
     use crate::activation::{ReLU, Sigmoid};
     use approx::assert_abs_diff_eq;
     use ndarray::arr2;
+    use ndarray::Zip;
+
+    fn arrays_are_close(a: &Array2<f64>, b: &Array2<f64>, tolerance: f64) -> bool {
+        if a.shape() != b.shape() {
+            return false;
+        }
+
+        Zip::from(a)
+            .and(b)
+            .fold(true, |acc, &a, &b| acc && (a - b).abs() <= tolerance)
+    }
 
     #[test]
     fn test_dense_layer_forward() {
@@ -247,5 +258,20 @@ mod test_layer {
         for x in input_gradient_diffs {
             assert_abs_diff_eq!(x, 0.0, epsilon = 1e-6);
         }
+    }
+    #[test]
+    fn test_batched_inputs_forward() {
+        let mut layer = DenseLayer::new(2, 3, Arc::new(ReLU {}));
+        layer.weights = Weights {
+            data: arr2(&[[2.0, 0.0], [0.0, 2.0], [0.0, 1.0]]),
+        };
+        layer.biases = Biases {
+            data: arr2(&[[0.1], [0.2], [0.3]]),
+        };
+        let input = arr2(&[[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]]);
+        let output = layer.forward(&input);
+        let expected_output = arr2(&[[2.3, 4.5, 6.7], [9.0, 11.2, 13.4], [4.7, 5.8, 6.9]]);
+        println!("{:#?}", output);
+        assert!(arrays_are_close(&output, &expected_output, 0.00001));
     }
 }
