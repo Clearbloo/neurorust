@@ -2,6 +2,7 @@ use crate::{activation::Activation, layer::DenseLayer, loss::Loss, optimizer::Op
 use ndarray::Array2;
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct Network<L: Loss, O: Optimization> {
     layers: Vec<DenseLayer>,
     loss: L,
@@ -54,6 +55,10 @@ impl<L: Loss, O: Optimization> Network<L, O> {
             .fold(input.clone(), |acc, layer| layer.forward(&acc))
     }
 
+    pub fn calculate_loss(&self, predictions: &Array2<f64>, targets: &Array2<f64>) -> f64 {
+        self.loss.calculate_loss(predictions, targets)
+    }
+
     // This method should implement the logic to perform a backward pass through the network,
     // updating weights and biases based on the gradient of the loss function with respect to the output.
     pub fn calculate_loss_gradient(
@@ -86,8 +91,8 @@ impl<L: Loss, O: Optimization> Network<L, O> {
 
             output_gradient = input_gradient; // Prepare for the next iteration
         }
-        println!("Weight updates:\n{:#?}", weight_updates);
-        println!("Bias updates\n{:#?}", bias_updates);
+        // println!("Weight updates:\n{:#?}", weight_updates);
+        // println!("Bias updates\n{:#?}", bias_updates);
 
         (weight_updates, bias_updates)
     }

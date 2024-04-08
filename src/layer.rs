@@ -10,15 +10,18 @@ impl Debug for dyn Activation {
 }
 
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct Weights {
     pub data: Array2<f64>,
 }
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct Biases {
     pub data: Array2<f64>,
 }
 
 #[derive(Debug)]
+#[derive(Clone)]
 pub struct DenseLayer {
     pub input_dim: usize,
     pub output_dim: usize,
@@ -68,24 +71,24 @@ impl DenseLayer {
         // 3. Calculate gradient w.r.t biases using `grad_biases`.
         // 4. Calculate gradient w.r.t input for backpropagation to previous layers using `grad_input`.
         // Return (weight_gradient, bias_gradient, input_gradient)
-        println!("Calculating activation gradient");
+        // println!("Calculating activation gradient");
         let activation_gradient = self.activation.calculate_gradient(output_gradient);
-        println!("{:#?}", activation_gradient);
+        // println!("{:#?}", activation_gradient);
 
         // Calculate gradient with respect to weights
-        println!("Calculating weight gradient");
+        // println!("Calculating weight gradient");
         let weight_gradient = self.grad_weights(&activation_gradient);
-        println!("{:#?}", weight_gradient);
+        // println!("{:#?}", weight_gradient);
 
         // Calculate gradient with respect to biases
-        println!("Calculating bias gradient");
+        // println!("Calculating bias gradient");
         let bias_gradient = self.grad_biases(&activation_gradient);
-        println!("{:#?}", bias_gradient);
+        // println!("{:#?}", bias_gradient);
 
         // Calculate gradient with respect to input for backpropagation through previous layers
-        println!("Calculating input gradient");
+        // println!("Calculating input gradient");
         let input_gradient = self.grad_input(&activation_gradient);
-        println!("{:#?}", input_gradient);
+        // println!("{:#?}", input_gradient);
 
         // Instead of returning the weight and bias gradients, could store them on the Layer instead
         (weight_gradient, bias_gradient, input_gradient)
