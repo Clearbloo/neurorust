@@ -9,19 +9,16 @@ impl Debug for dyn Activation {
     }
 }
 
-#[derive(Debug)]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Weights {
     pub data: Array2<f64>,
 }
-#[derive(Debug)]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Biases {
     pub data: Array2<f64>,
 }
 
-#[derive(Debug)]
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct DenseLayer {
     pub input_dim: usize,
     pub output_dim: usize,
