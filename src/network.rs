@@ -77,8 +77,6 @@ impl<L: Loss, O: Optimization> Network<L, O> {
     ) -> (Vec<Array2<f64>>, Vec<Array2<f64>>) {
         // Now, iterate over layers with mutable access
         let loss_gradient = self.calculate_loss_gradient(outputs, targets);
-        // println!("Output: {:#?}\nTarget: {:#?}", outputs, targets);
-        // println!("Loss Gradient: {:#?}", loss_gradient);
         let mut output_gradient: Array2<f64> = loss_gradient; // This should be initialized with the gradient of the loss function w.r.t the output of the last layer.
 
         // Collect updates for each layer
@@ -93,9 +91,6 @@ impl<L: Loss, O: Optimization> Network<L, O> {
 
             output_gradient = input_gradient; // Prepare for the next iteration
         }
-
-        // println!("Weight updates:\n{:#?}", weight_updates);
-        // println!("Bias updates\n{:#?}", bias_updates);
 
         (weight_updates, bias_updates)
     }
@@ -191,7 +186,7 @@ mod test_network {
             &architecture,
             &activations,
             MeanSquaredError,
-            SGD { lr: 0.1 },
+            SGD { lr: 0.001 },
         );
 
         let input = arr2(&[[1.0]]);
@@ -199,12 +194,14 @@ mod test_network {
 
         // Capture the initial output before training
         let initial_output = net.forward(&input);
+        println!("inital output: {}", initial_output);
 
         // Train the network
         net.train(&input, &targets);
 
         // Capture the output after training
         let trained_output = net.forward(&input);
+        println!("after training: {}", trained_output);
 
         // Example assertion: check if the trained output is closer to the targets than the initial output
         // This requires calculating the loss for both and comparing them

@@ -68,24 +68,16 @@ impl DenseLayer {
         // 3. Calculate gradient w.r.t biases using `grad_biases`.
         // 4. Calculate gradient w.r.t input for backpropagation to previous layers using `grad_input`.
         // Return (weight_gradient, bias_gradient, input_gradient)
-        // println!("Calculating activation gradient");
         let activation_gradient = self.activation.calculate_gradient(output_gradient);
-        // println!("Activation gradient: {:#?}", activation_gradient);
 
         // Calculate gradient with respect to weights
-        // println!("Calculating weight gradient");
         let weight_gradient = self.grad_weights(&activation_gradient);
-        // println!("{:#?}", weight_gradient);
 
         // Calculate gradient with respect to biases
-        // println!("Calculating bias gradient");
         let bias_gradient = self.grad_biases(&activation_gradient);
-        // println!("{:#?}", bias_gradient);
 
         // Calculate gradient with respect to input for backpropagation through previous layers
-        // println!("Calculating input gradient");
         let input_gradient = self.grad_input(&activation_gradient);
-        // println!("{:#?}", input_gradient);
 
         // Instead of returning the weight and bias gradients, could store them on the Layer instead
         (weight_gradient, bias_gradient, input_gradient)
@@ -189,18 +181,12 @@ mod test_layer {
         // Define a test input and a mock output gradient (as if coming from the next layer)
         let input = arr2(&[[1.0], [-1.0]]);
         let output = layer.forward(&input);
-        println!("Output:\n {:#?}", output);
         let mock_input_grad_of_next_layer = arr2(&[[1.0], [1.0]]);
         let (weight_gradient, bias_gradient, input_gradient) =
             layer.grad_layer(&mock_input_grad_of_next_layer);
         let expected_weight_gradient = arr2(&[[1.0, -1.0], [1.0, -1.0]]); // FIXME - Update when implemented
         let expected_bias_gradient = arr2(&[[1.0], [1.0]]); // FIXME - Update when implemented
         let expected_input_gradient = arr2(&[[1.0], [0.0]]);
-
-        println!(
-            "Weight grad:\n {:#?},\n Bias grad:\n {:#?},\n Input grad:\n {:#?}",
-            weight_gradient, bias_gradient, input_gradient
-        );
 
         let weight_gradient_diffs = expected_weight_gradient - weight_gradient;
         let bias_gradient_diffs = expected_bias_gradient - bias_gradient;
@@ -231,7 +217,6 @@ mod test_layer {
         // Define a test input and a mock output gradient (as if coming from the next layer)
         let input = arr2(&[[1.0], [-1.0]]);
         let output = layer.forward(&input);
-        println!("Output:\n {:#?}", output);
         let mock_input_grad_of_next_layer = arr2(&[[1.0], [1.0], [2.2]]);
         let (weight_gradient, bias_gradient, input_gradient) =
             layer.grad_layer(&mock_input_grad_of_next_layer);
@@ -239,11 +224,6 @@ mod test_layer {
         let expected_weight_gradient = arr2(&[[1.0, -1.0], [1.0, -1.0], [1.0, -1.0]]); // FIXME - Update when implemented
         let expected_bias_gradient = arr2(&[[1.0], [1.0], [1.0]]); // FIXME - Update when implemented
         let expected_input_gradient = arr2(&[[1.6], [2.8]]);
-
-        println!(
-            "Weight grad:\n {:#?},\n Bias grad:\n {:#?},\n Input grad:\n {:#?}",
-            weight_gradient, bias_gradient, input_gradient
-        );
 
         let weight_gradient_diffs = expected_weight_gradient - weight_gradient;
         let bias_gradient_diffs = expected_bias_gradient - bias_gradient;
@@ -271,7 +251,6 @@ mod test_layer {
         let input = arr2(&[[1.1, 2.2, 3.3], [4.4, 5.5, 6.6]]);
         let output = layer.forward(&input);
         let expected_output = arr2(&[[2.3, 4.5, 6.7], [9.0, 11.2, 13.4], [4.7, 5.8, 6.9]]);
-        println!("{:#?}", output);
         assert!(arrays_are_close(&output, &expected_output, 0.00001));
     }
 }
