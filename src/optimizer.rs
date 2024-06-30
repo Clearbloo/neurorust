@@ -22,8 +22,8 @@ impl Optimization for Adam {
     fn apply_updates(
         &self,
         _layers: &mut Vec<DenseLayer>,
-        weight_updates: &[Array2<f64>],
-        bias_updates: &[Array2<f64>],
+        _weight_updates: &[Array2<f64>],
+        _bias_updates: &[Array2<f64>],
     ) {
         // todo!()
     }
