@@ -41,7 +41,7 @@ impl<L: Loss, O: Optimization> Network<L, O> {
             layers,
             loss,
             optimizer,
-            epochs: 10,
+            epochs: 50,
         }
     }
 
@@ -77,6 +77,8 @@ impl<L: Loss, O: Optimization> Network<L, O> {
     ) -> (Vec<Array2<f64>>, Vec<Array2<f64>>) {
         // Now, iterate over layers with mutable access
         let loss_gradient = self.calculate_loss_gradient(outputs, targets);
+        // println!("Output: {:#?}\nTarget: {:#?}", outputs, targets);
+        // println!("Loss Gradient: {:#?}", loss_gradient);
         let mut output_gradient: Array2<f64> = loss_gradient; // This should be initialized with the gradient of the loss function w.r.t the output of the last layer.
 
         // Collect updates for each layer
@@ -91,6 +93,7 @@ impl<L: Loss, O: Optimization> Network<L, O> {
 
             output_gradient = input_gradient; // Prepare for the next iteration
         }
+
         // println!("Weight updates:\n{:#?}", weight_updates);
         // println!("Bias updates\n{:#?}", bias_updates);
 
@@ -102,7 +105,7 @@ impl<L: Loss, O: Optimization> Network<L, O> {
         weight_updates: Vec<Array2<f64>>,
         bias_updates: Vec<Array2<f64>>,
     ) -> &mut Network<L, O> {
-        // TODO - Can probably just delete this method
+        // TODO - Can probably just delete this method and use the optimizer directly
         self.optimizer
             .apply_updates(&mut self.layers, &weight_updates, &bias_updates);
         self
@@ -122,7 +125,6 @@ impl<L: Loss, O: Optimization> Network<L, O> {
             let outputs = self.forward(input);
             let (weight_updates, bias_updates) = self.backwards(&outputs, targets);
             self.update_parameters(weight_updates, bias_updates);
-            // println!("{}", self.loss.calculate_loss(self.clone().forward(&input), targets));
         }
     }
 }
@@ -141,14 +143,27 @@ mod test_network {
 
     #[test]
     fn test_init() {
-        let architecture = vec![1, 2, 1];
+        let architecture_1 = vec![1, 2, 1];
         let activations: Vec<Arc<dyn Activation>> = vec![Arc::new(ReLU {}), Arc::new(LeakyReLU {})];
-        Network::new(
-            &architecture,
+        let net1 = Network::new(
+            &architecture_1,
             &activations,
             MeanSquaredError,
             Adam { lr: 0.001 },
         );
+
+        assert_eq!(net1.layers.len(), 2);
+
+        let architecture_2 = vec![1, 1];
+        let activations_2: Vec<Arc<dyn Activation>> = vec![Arc::new(ReLU {})];
+        let net2 = Network::new(
+            &architecture_2,
+            &activations_2,
+            MeanSquaredError,
+            Adam { lr: 0.001 },
+        );
+
+        assert_eq!(net2.layers.len(), 1);
     }
 
     #[test]

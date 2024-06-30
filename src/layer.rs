@@ -70,7 +70,7 @@ impl DenseLayer {
         // Return (weight_gradient, bias_gradient, input_gradient)
         // println!("Calculating activation gradient");
         let activation_gradient = self.activation.calculate_gradient(output_gradient);
-        // println!("{:#?}", activation_gradient);
+        // println!("Activation gradient: {:#?}", activation_gradient);
 
         // Calculate gradient with respect to weights
         // println!("Calculating weight gradient");

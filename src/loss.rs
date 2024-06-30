@@ -15,11 +15,11 @@ impl Loss for MeanSquaredError {
         let n = predictions.len() as f64;
         Zip::from(predictions)
             .and(targets)
-            .fold(0.0, |acc, &pred, &target| acc + (pred - target).powi(2))
+            .fold(0.0, |acc, &pred, &target| acc + (target - pred).powi(2))
             / n
     }
     fn calculate_gradient(&self, predictions: &Array2<f64>, targets: &Array2<f64>) -> Array2<f64> {
-        2.0 / (predictions.shape()[0] as f64) * (predictions - targets)
+        2.0 / (predictions.shape()[0] as f64) * (targets - predictions)
     }
 }
 impl Loss for MeanAbsoluteError {
@@ -27,12 +27,12 @@ impl Loss for MeanAbsoluteError {
         let n = predictions.len() as f64;
         Zip::from(predictions)
             .and(targets)
-            .fold(0.0, |acc, &pred, &target| acc + (pred - target).abs())
+            .fold(0.0, |acc, &pred, &target| acc + (target - pred).abs())
             / n
     }
     fn calculate_gradient(&self, predictions: &Array2<f64>, targets: &Array2<f64>) -> Array2<f64> {
         // TODO - Just using same as MSE for now
-        2.0 / (predictions.shape()[0] as f64) * (predictions - targets)
+        2.0 / (predictions.shape()[0] as f64) * (targets - predictions)
     }
 }
 
