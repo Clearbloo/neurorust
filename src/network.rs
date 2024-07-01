@@ -1,4 +1,4 @@
-use crate::{activation::Activation, layer::DenseLayer, loss::Loss, optimizer::Optimization};
+use crate::{activation::Activate, layer::DenseLayer, loss::Loss, optimizer::Optimization};
 use ndarray::Array2;
 use std::sync::Arc;
 
@@ -10,7 +10,7 @@ pub struct Network<L: Loss, O: Optimization> {
     epochs: i32,
 }
 
-// impl<A: Activation, L: Loss, O: Optimization> Default for Network<A, L, O> {
+// impl<A: Activate, L: Loss, O: Optimization> Default for Network<A, L, O> {
 //     fn default() -> Self {
 //         Self::new(vec![1], MeanAbsoluteError,Adam)
 //     }
@@ -19,7 +19,7 @@ pub struct Network<L: Loss, O: Optimization> {
 impl<L: Loss, O: Optimization> Network<L, O> {
     pub fn new(
         architecture: &Vec<usize>,
-        activations: &[Arc<dyn Activation>],
+        activations: &[Arc<dyn Activate>],
         loss: L,
         optimizer: O,
     ) -> Self {
@@ -129,7 +129,7 @@ mod test_network {
     use ndarray::arr2;
 
     use crate::{
-        activation::{LeakyReLU, ReLU},
+        activation::Activation,
         loss::MeanSquaredError,
         optimizer::{Adam, SGD},
     };
@@ -139,7 +139,10 @@ mod test_network {
     #[test]
     fn test_init() {
         let architecture_1 = vec![1, 2, 1];
-        let activations: Vec<Arc<dyn Activation>> = vec![Arc::new(ReLU {}), Arc::new(LeakyReLU {})];
+        let activations: Vec<Arc<dyn Activate>> = vec![
+            Arc::new(Activation::ReLU),
+            Arc::new(Activation::LeakyReLU(0.1)),
+        ];
         let net1 = Network::new(
             &architecture_1,
             &activations,
@@ -150,7 +153,7 @@ mod test_network {
         assert_eq!(net1.layers.len(), 2);
 
         let architecture_2 = vec![1, 1];
-        let activations_2: Vec<Arc<dyn Activation>> = vec![Arc::new(ReLU {})];
+        let activations_2: Vec<Arc<dyn Activate>> = vec![Arc::new(Activation::ReLU)];
         let net2 = Network::new(
             &architecture_2,
             &activations_2,
@@ -164,7 +167,10 @@ mod test_network {
     #[test]
     fn test_train() {
         let architecture = vec![1, 2, 1];
-        let activations: Vec<Arc<dyn Activation>> = vec![Arc::new(ReLU {}), Arc::new(LeakyReLU {})];
+        let activations: Vec<Arc<dyn Activate>> = vec![
+            Arc::new(Activation::ReLU),
+            Arc::new(Activation::LeakyReLU(0.1)),
+        ];
         let mut net = Network::new(
             &architecture,
             &activations,
@@ -181,7 +187,10 @@ mod test_network {
     #[test]
     fn test_train_updates_network_outputs() {
         let architecture = vec![1, 2, 1];
-        let activations: Vec<Arc<dyn Activation>> = vec![Arc::new(ReLU {}), Arc::new(LeakyReLU {})];
+        let activations: Vec<Arc<dyn Activate>> = vec![
+            Arc::new(Activation::ReLU),
+            Arc::new(Activation::LeakyReLU(0.1)),
+        ];
         let mut net = Network::new(
             &architecture,
             &activations,

@@ -1,11 +1,11 @@
-use crate::activation::Activation;
+use crate::activation::Activate;
 use core::fmt::Debug;
 use ndarray::Array2;
 use rand::Rng;
 use std::sync::Arc;
-impl Debug for dyn Activation {
+impl Debug for dyn Activate {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "Activation")
+        write!(f, "Activate")
     }
 }
 
@@ -24,12 +24,12 @@ pub struct DenseLayer {
     pub output_dim: usize,
     pub weights: Weights,
     pub biases: Biases,
-    pub activation: Arc<dyn Activation>,
+    pub activation: Arc<dyn Activate>,
     pub input: Array2<f64>,
 }
 
 impl DenseLayer {
-    pub fn new(input_dim: usize, output_dim: usize, activation: Arc<dyn Activation>) -> Self {
+    pub fn new(input_dim: usize, output_dim: usize, activation: Arc<dyn Activate>) -> Self {
         let mut rng = rand::thread_rng();
         let weights = Weights {
             data: Array2::from_shape_fn((output_dim, input_dim), |_| rng.gen_range(-1.0..1.0)),
@@ -103,7 +103,7 @@ impl DenseLayer {
 #[cfg(test)]
 mod test_layer {
     use super::*;
-    use crate::activation::{ReLU, Sigmoid};
+    use crate::activation::Activation;
     use approx::assert_abs_diff_eq;
     use ndarray::arr2;
     use ndarray::Zip;
@@ -121,7 +121,7 @@ mod test_layer {
     #[test]
     fn test_dense_layer_forward() {
         // ReLU
-        let mut layer = DenseLayer::new(2, 2, Arc::new(ReLU {}));
+        let mut layer = DenseLayer::new(2, 2, Arc::new(Activation::ReLU {}));
         layer.weights = Weights {
             data: arr2(&[[0.5, -0.5], [0.5, -0.5]]),
         };
@@ -135,7 +135,7 @@ mod test_layer {
 
         assert_eq!(output, expected_output);
 
-        let mut layer = DenseLayer::new(2, 2, Arc::new(ReLU {}));
+        let mut layer = DenseLayer::new(2, 2, Arc::new(Activation::ReLU {}));
         layer.weights = Weights {
             data: arr2(&[[0.5, -0.5], [0.5, -0.5]]),
         };
@@ -150,8 +150,8 @@ mod test_layer {
 
         assert_eq!(output, expected_output);
 
-        // Sigmoid
-        let mut layer = DenseLayer::new(2, 2, Arc::new(Sigmoid {}));
+        // Activation::Sigmoid
+        let mut layer = DenseLayer::new(2, 2, Arc::new(Activation::Sigmoid {}));
         layer.weights = Weights {
             data: arr2(&[[0.5, -0.5], [0.5, -0.5]]),
         };
@@ -170,7 +170,7 @@ mod test_layer {
     #[test]
     fn test_grad_layer_2_by_2() {
         // Test 1
-        let mut layer = DenseLayer::new(2, 2, Arc::new(ReLU {}));
+        let mut layer = DenseLayer::new(2, 2, Arc::new(Activation::ReLU {}));
         layer.weights = Weights {
             data: arr2(&[[0.5, 0.0], [0.5, 0.0]]),
         };
@@ -179,8 +179,8 @@ mod test_layer {
         };
 
         // Define a test input and a mock output gradient (as if coming from the next layer)
-        let input = arr2(&[[1.0], [-1.0]]);
-        let output = layer.forward(&input);
+        // let input = arr2(&[[1.0], [-1.0]]);
+        // let output = layer.forward(&input);
         let mock_input_grad_of_next_layer = arr2(&[[1.0], [1.0]]);
         let (weight_gradient, bias_gradient, input_gradient) =
             layer.grad_layer(&mock_input_grad_of_next_layer);
@@ -206,7 +206,7 @@ mod test_layer {
     #[test]
     fn test_grad_layer_3_by_2() {
         // Test 2
-        let mut layer = DenseLayer::new(2, 3, Arc::new(ReLU {}));
+        let mut layer = DenseLayer::new(2, 3, Arc::new(Activation::ReLU {}));
         layer.weights = Weights {
             data: arr2(&[[0.5, 0.0], [1.1, 0.5], [0.0, 2.3]]),
         };
@@ -215,8 +215,8 @@ mod test_layer {
         };
 
         // Define a test input and a mock output gradient (as if coming from the next layer)
-        let input = arr2(&[[1.0], [-1.0]]);
-        let output = layer.forward(&input);
+        // let input = arr2(&[[1.0], [-1.0]]);
+        // let output = layer.forward(&input);
         let mock_input_grad_of_next_layer = arr2(&[[1.0], [1.0], [2.2]]);
         let (weight_gradient, bias_gradient, input_gradient) =
             layer.grad_layer(&mock_input_grad_of_next_layer);
@@ -241,7 +241,7 @@ mod test_layer {
     }
     #[test]
     fn test_batched_inputs_forward() {
-        let mut layer = DenseLayer::new(2, 3, Arc::new(ReLU {}));
+        let mut layer = DenseLayer::new(2, 3, Arc::new(Activation::ReLU {}));
         layer.weights = Weights {
             data: arr2(&[[2.0, 0.0], [0.0, 2.0], [0.0, 1.0]]),
         };
