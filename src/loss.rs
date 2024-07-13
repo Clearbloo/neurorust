@@ -16,7 +16,9 @@ impl Loss for MeanSquaredError {
         let n = predictions.len() as f64;
         Zip::from(predictions)
             .and(targets)
-            .fold(0.0, |acc, &pred, &target| acc + (pred - target).powi(2))
+            .fold(0.0, |acc, &pred, &target| {
+                (pred - target).mul_add(pred - target, acc)
+            })
             / n
     }
     fn calculate_gradient(&self, predictions: &Array2<f64>, targets: &Array2<f64>) -> Array2<f64> {
@@ -48,12 +50,12 @@ mod test_loss_functions {
 
         let mse = MeanSquaredError;
         let result = mse.calculate_loss(&predictions, &targets);
-        println!("MSE Loss: {}", result);
+        println!("MSE Loss: {result}");
         // The average difference is 5.0, so MSE = 25.0
         assert_eq!(result, 25.0);
 
         let grad = mse.calculate_gradient(&predictions, &targets);
-        assert_eq!(grad, Array2::from_elem([1, 5], 10.0))
+        assert_eq!(grad, Array2::from_elem([1, 5], 10.0));
     }
 
     #[test]
@@ -63,10 +65,10 @@ mod test_loss_functions {
 
         let mae = MeanAbsoluteError;
         let result = mae.calculate_loss(&predictions, &targets);
-        println!("MAE Loss: {}", result);
+        println!("MAE Loss: {result}");
         assert_eq!(result, 1.0);
 
         let grad = mae.calculate_gradient(&predictions, &targets);
-        assert_eq!(grad, Array2::from_elem([1, 5], 1.0))
+        assert_eq!(grad, Array2::from_elem([1, 5], 1.0));
     }
 }

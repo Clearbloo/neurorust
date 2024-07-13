@@ -1,7 +1,7 @@
 use ndarray::Array2;
 
 pub trait Activate {
-    fn activate(&self, input: Array2<f64>) -> Array2<f64>;
+    fn activate(&self, input: &Array2<f64>) -> Array2<f64>;
     fn calculate_gradient(&self, output: &Array2<f64>) -> Array2<f64>;
 }
 
@@ -14,32 +14,32 @@ pub enum Activation {
 
 impl Activate for Activation {
     // Implement the trait for the enum
-    fn activate(&self, x: Array2<f64>) -> Array2<f64> {
+    fn activate(&self, x: &Array2<f64>) -> Array2<f64> {
         match self {
-            Activation::ReLU => relu(x),
-            Activation::LeakyReLU(slope) => leaky_relu(x, *slope),
-            Activation::Sigmoid => sigmoid(x),
+            Self::ReLU => relu(x),
+            Self::LeakyReLU(slope) => leaky_relu(x, *slope),
+            Self::Sigmoid => sigmoid(x),
         }
     }
     fn calculate_gradient(&self, output: &Array2<f64>) -> Array2<f64> {
         match self {
-            Activation::ReLU => relu_gradient(output),
-            Activation::LeakyReLU(slope) => leaky_relu_gradient(output, *slope),
-            Activation::Sigmoid => sigmoid_gradient(output),
+            Self::ReLU => relu_gradient(output),
+            Self::LeakyReLU(slope) => leaky_relu_gradient(output, *slope),
+            Self::Sigmoid => sigmoid_gradient(output),
         }
     }
 }
 
 // Activation functions
-fn relu(input: Array2<f64>) -> Array2<f64> {
+fn relu(input: &Array2<f64>) -> Array2<f64> {
     input.map(|x| if x > &0.0 { *x } else { 0.0 })
 }
 
-fn leaky_relu(input: Array2<f64>, slope: f64) -> Array2<f64> {
+fn leaky_relu(input: &Array2<f64>, slope: f64) -> Array2<f64> {
     input.map(|x| if x > &0.0 { *x } else { slope * x })
 }
 
-fn sigmoid(input: Array2<f64>) -> Array2<f64> {
+fn sigmoid(input: &Array2<f64>) -> Array2<f64> {
     input.map(|x| 1.0 / (1.0 + (-x).exp()))
 }
 
@@ -65,7 +65,7 @@ mod test_activations {
     fn test_relu() {
         let relu = Activation::ReLU;
         let input = arr2(&[[1.0, -2.0], [2.0, -3.0]]);
-        let result = relu.activate(input);
+        let result = relu.activate(&input);
         assert_eq!(result, arr2(&[[1.0, 0.0], [2.0, 0.0]]));
 
         let act_grad = relu.calculate_gradient(&result);

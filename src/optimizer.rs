@@ -1,4 +1,4 @@
-use ndarray::{arr2, Array2};
+use ndarray::Array2;
 
 use crate::layer::DenseLayer;
 // TODO - Also should make into Enums
@@ -38,22 +38,15 @@ impl Optimization for SGD {
     ) {
         // TODO - Consider normalizing the weight update
         for (i, layer) in layers.iter_mut().rev().enumerate() {
-            let wupdate = self.lr * &weight_updates[i];
-            println!(
-                "Layer number {i},\n wupdate:\n {},\n weights:\n {}",
-                wupdate, layer.weights.data
-            );
-            layer.weights.data += &wupdate;
+            let layer_weight_update = self.lr * &weight_updates[i];
 
-            println!("All bias updates {:?}", bias_updates);
+            layer.weights.data += &layer_weight_update;
 
-            let bupdate = self.lr * &bias_updates[i];
+            println!("All bias updates {bias_updates:?}");
 
-            println!(
-                "Layer number {i},\n bupdates:\n {:?},\n bias:\n {}",
-                bupdate, layer.biases.data
-            );
-            layer.biases.data += &bupdate;
+            let layer_bias_update = self.lr * &bias_updates[i];
+
+            layer.biases.data += &layer_bias_update;
         }
     }
 }

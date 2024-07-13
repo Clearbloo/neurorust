@@ -37,7 +37,7 @@ impl<L: Loss, O: Optimization> Network<L, O> {
             }
         }
 
-        Network {
+        Self {
             layers,
             loss,
             optimizer,
@@ -99,9 +99,9 @@ impl<L: Loss, O: Optimization> Network<L, O> {
 
     fn update_parameters(
         &mut self,
-        weight_updates: Vec<Array2<f64>>,
-        bias_updates: Vec<Array2<f64>>,
-    ) -> &mut Network<L, O> {
+        weight_updates: &[Array2<f64>],
+        bias_updates: &[Array2<f64>],
+    ) -> &mut Self {
         // TODO - Can probably just delete this method and use the optimizer directly
         self.optimizer
             .apply_updates(&mut self.layers, &weight_updates, &bias_updates);
@@ -121,7 +121,7 @@ impl<L: Loss, O: Optimization> Network<L, O> {
         for _e in 0..self.epochs {
             let outputs = self.forward(input);
             let (weight_updates, bias_updates) = self.backwards(&outputs, targets);
-            self.update_parameters(weight_updates, bias_updates);
+            self.update_parameters(&weight_updates, &bias_updates);
         }
     }
 }
@@ -183,7 +183,7 @@ mod test_network {
         let input = arr2(&[[1.0]]);
         let targets = arr2(&[[2.0]]);
 
-        net.train(&input, &targets)
+        net.train(&input, &targets);
     }
 
     #[test]
@@ -208,14 +208,14 @@ mod test_network {
 
         // Capture the initial output before training
         let initial_output = net.forward(&input);
-        println!("inital output: {}", initial_output);
+        println!("inital output: {initial_output}");
 
         // Train the network
         net.train(&input, &targets);
 
         // Capture the output after training
         let trained_output = net.forward(&input);
-        println!("after training: {}", trained_output);
+        println!("after training: {trained_output}");
 
         // Example assertion: check if the trained output is closer to the targets than the initial output
         // This requires calculating the loss for both and comparing them
