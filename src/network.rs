@@ -77,7 +77,9 @@ impl<L: Loss, O: Optimization> Network<L, O> {
     ) -> (Vec<Array2<f64>>, Vec<Array2<f64>>) {
         // Now, iterate over layers with mutable access
         let loss_gradient = self.calculate_loss_gradient(outputs, targets);
-        let mut output_gradient: Array2<f64> = loss_gradient; // This should be initialized with the gradient of the loss function w.r.t the output of the last layer.
+
+        // This should be initialized with the gradient of the loss function w.r.t the output of the last layer.
+        let mut output_gradient: Array2<f64> = loss_gradient;
 
         // Collect updates for each layer
         let mut weight_updates: Vec<Array2<f64>> = Vec::new();
@@ -186,7 +188,9 @@ mod test_network {
 
     #[test]
     fn test_train_updates_network_outputs() {
-        let architecture = vec![1, 2, 1];
+        use std::env;
+        env::set_var("RUST_BACKTRACE", "1");
+        let architecture = vec![2, 2, 1];
         let activations: Vec<Arc<dyn Activate>> = vec![
             Arc::new(Activation::ReLU),
             Arc::new(Activation::LeakyReLU(0.1)),
@@ -198,8 +202,9 @@ mod test_network {
             SGD { lr: 0.001 },
         );
 
-        let input = arr2(&[[1.0]]);
-        let targets = arr2(&[[2.0]]);
+        // Input is a batch of 2 2D input vectors
+        let input = arr2(&[[1.0, 2.0], [3.0, 4.5]]);
+        let targets = arr2(&[[2.0, 9.8]]);
 
         // Capture the initial output before training
         let initial_output = net.forward(&input);
@@ -216,7 +221,7 @@ mod test_network {
         // This requires calculating the loss for both and comparing them
         let initial_loss = MeanSquaredError.calculate_loss(&initial_output, &targets);
         let trained_loss = MeanSquaredError.calculate_loss(&trained_output, &targets);
-        println!("{}, {}", initial_loss, trained_loss);
+        println!("{initial_loss}, {trained_loss}");
         assert!(
             trained_loss < initial_loss,
             "Training should reduce the loss"

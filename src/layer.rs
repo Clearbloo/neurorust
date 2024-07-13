@@ -1,6 +1,6 @@
 use crate::activation::Activate;
 use core::fmt::Debug;
-use ndarray::Array2;
+use ndarray::{Array2, Axis};
 use rand::Rng;
 use std::sync::Arc;
 impl Debug for dyn Activate {
@@ -57,17 +57,16 @@ impl DenseLayer {
 
         self.activation.activate(linear_output)
     }
-
+    /// This function calculates the gradients of this layer
+    /// 1. Apply the derivative of the activation function to the output_gradient.
+    /// 2. Calculate gradient w.r.t weights using `grad_weights`.
+    /// 3. Calculate gradient w.r.t biases using `grad_biases`.
+    /// 4. Calculate gradient w.r.t input for backpropagation to previous layers using `grad_input`.
+    /// Return (weight_gradient, bias_gradient, input_gradient)
     pub fn grad_layer(
         &self,
         output_gradient: &Array2<f64>,
     ) -> (Array2<f64>, Array2<f64>, Array2<f64>) {
-        // This function calculates the gradients of this layer
-        // 1. Apply the derivative of the activation function to the output_gradient.
-        // 2. Calculate gradient w.r.t weights using `grad_weights`.
-        // 3. Calculate gradient w.r.t biases using `grad_biases`.
-        // 4. Calculate gradient w.r.t input for backpropagation to previous layers using `grad_input`.
-        // Return (weight_gradient, bias_gradient, input_gradient)
         let activation_gradient = self.activation.calculate_gradient(output_gradient);
 
         // Calculate gradient with respect to weights
@@ -91,7 +90,13 @@ impl DenseLayer {
 
     // Compute gradient of the loss with respect to biases
     pub fn grad_biases(&self, activation_gradient: &Array2<f64>) -> Array2<f64> {
-        activation_gradient.to_owned() //.sum_axis(Axis(0)).insert_axis(Axis(0))
+        println!("activation_gradient {:?}", activation_gradient);
+        let bias_grad = activation_gradient
+            .sum_axis(Axis(1))
+            .insert_axis(Axis(1))
+            .to_owned();
+        println!("Bias gradient:\n {bias_grad}");
+        bias_grad
     }
 
     pub fn grad_input(&self, activation_gradient: &Array2<f64>) -> Array2<f64> {
@@ -170,7 +175,7 @@ mod test_layer {
     #[test]
     fn test_grad_layer_2_by_2() {
         // Test 1
-        let mut layer = DenseLayer::new(2, 2, Arc::new(Activation::ReLU {}));
+        let mut layer = DenseLayer::new(2, 2, Arc::new(Activation::ReLU));
         layer.weights = Weights {
             data: arr2(&[[0.5, 0.0], [0.5, 0.0]]),
         };
@@ -179,8 +184,11 @@ mod test_layer {
         };
 
         // Define a test input and a mock output gradient (as if coming from the next layer)
-        // let input = arr2(&[[1.0], [-1.0]]);
-        // let output = layer.forward(&input);
+
+        // Set the layer input with a forward pass
+        let input = arr2(&[[1.0], [-1.0]]);
+        layer.forward(&input);
+
         let mock_input_grad_of_next_layer = arr2(&[[1.0], [1.0]]);
         let (weight_gradient, bias_gradient, input_gradient) =
             layer.grad_layer(&mock_input_grad_of_next_layer);
@@ -205,8 +213,10 @@ mod test_layer {
 
     #[test]
     fn test_grad_layer_3_by_2() {
+        use std::env;
+        env::set_var("RUST_BACKTRACE", "1");
         // Test 2
-        let mut layer = DenseLayer::new(2, 3, Arc::new(Activation::ReLU {}));
+        let mut layer = DenseLayer::new(2, 3, Arc::new(Activation::LeakyReLU(0.1)));
         layer.weights = Weights {
             data: arr2(&[[0.5, 0.0], [1.1, 0.5], [0.0, 2.3]]),
         };
@@ -215,16 +225,31 @@ mod test_layer {
         };
 
         // Define a test input and a mock output gradient (as if coming from the next layer)
-        // let input = arr2(&[[1.0], [-1.0]]);
-        // let output = layer.forward(&input);
-        let mock_input_grad_of_next_layer = arr2(&[[1.0], [1.0], [2.2]]);
+
+        // We need to make a forward pass to set the input
+        let input = arr2(&[
+            [1.0, 2.5, 3.6, -4.4, 100.1],
+            [1.0, -1.4, -7.7, 345.9, 239487.123234],
+        ]);
+        layer.forward(&input);
+        let mock_input_grad_of_next_layer = arr2(&[
+            [1.0, 2.0, 3.0, 1.0, 4.4],
+            [5.5, 2.2, 6.6, 23.3, 23.65],
+            [4.4, 234.5, 4.3, 7.8, 3.2],
+        ]);
         let (weight_gradient, bias_gradient, input_gradient) =
             layer.grad_layer(&mock_input_grad_of_next_layer);
 
-        let expected_weight_gradient = arr2(&[[1.0, -1.0], [1.0, -1.0], [1.0, -1.0]]); // FIXME - Update when implemented
-        let expected_bias_gradient = arr2(&[[1.0], [1.0], [1.0]]); // FIXME - Update when implemented
+        let expected_weight_gradient = arr2(&[
+            [102.8, 239824.923234],
+            [102.8, 239824.923234],
+            [102.8, 239824.923234],
+        ]); // FIXME - Update when implemented
+        let expected_bias_gradient = arr2(&[[5.0], [5.0], [5.0]]); // FIXME - Update when implemented
         let expected_input_gradient = arr2(&[[1.6], [2.8]]);
-
+        println!(
+            "Wgrad:\n{weight_gradient},\n Bgrad:\n{bias_gradient},\n Igrad:\n{input_gradient}"
+        );
         let weight_gradient_diffs = expected_weight_gradient - weight_gradient;
         let bias_gradient_diffs = expected_bias_gradient - bias_gradient;
         let input_gradient_diffs = expected_input_gradient - input_gradient;
