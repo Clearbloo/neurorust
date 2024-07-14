@@ -19,7 +19,7 @@ pub struct Biases {
 }
 
 #[derive(Debug, Clone)]
-pub struct DenseLayer {
+pub struct Dense {
     pub input_dim: usize,
     pub output_dim: usize,
     pub weights: Weights,
@@ -28,7 +28,7 @@ pub struct DenseLayer {
     pub input: Array2<f64>,
 }
 
-impl DenseLayer {
+impl Dense {
     pub fn new(input_dim: usize, output_dim: usize, activation: Arc<dyn Activate>) -> Self {
         let mut rng = rand::thread_rng();
         let weights = Weights {
@@ -130,7 +130,7 @@ mod test_layer {
     #[test]
     fn test_dense_layer_forward() {
         // ReLU
-        let mut layer = DenseLayer::new(2, 2, Arc::new(Activation::ReLU {}));
+        let mut layer = Dense::new(2, 2, Arc::new(Activation::ReLU {}));
         layer.weights = Weights {
             data: arr2(&[[0.5, -0.5], [0.5, -0.5]]),
         };
@@ -144,7 +144,7 @@ mod test_layer {
 
         assert_eq!(output, expected_output);
 
-        let mut layer = DenseLayer::new(2, 2, Arc::new(Activation::ReLU {}));
+        let mut layer = Dense::new(2, 2, Arc::new(Activation::ReLU {}));
         layer.weights = Weights {
             data: arr2(&[[0.5, -0.5], [0.5, -0.5]]),
         };
@@ -160,7 +160,7 @@ mod test_layer {
         assert_eq!(output, expected_output);
 
         // Activation::Sigmoid
-        let mut layer = DenseLayer::new(2, 2, Arc::new(Activation::Sigmoid {}));
+        let mut layer = Dense::new(2, 2, Arc::new(Activation::Sigmoid {}));
         layer.weights = Weights {
             data: arr2(&[[0.5, -0.5], [0.5, -0.5]]),
         };
@@ -179,7 +179,7 @@ mod test_layer {
     #[test]
     fn test_grad_layer_2_by_2() {
         // Test 1
-        let mut layer = DenseLayer::new(2, 2, Arc::new(Activation::ReLU));
+        let mut layer = Dense::new(2, 2, Arc::new(Activation::ReLU));
         layer.weights = Weights {
             data: arr2(&[[0.5, 0.0], [0.5, 0.0]]),
         };
@@ -220,7 +220,7 @@ mod test_layer {
         use std::env;
         env::set_var("RUST_BACKTRACE", "1");
         // Test 2
-        let mut layer = DenseLayer::new(2, 3, Arc::new(Activation::LeakyReLU(0.1)));
+        let mut layer = Dense::new(2, 3, Arc::new(Activation::LeakyReLU(0.1)));
         layer.weights = Weights {
             data: arr2(&[[0.5, 0.0], [1.1, 0.5], [0.0, 2.3]]),
         };
@@ -270,7 +270,7 @@ mod test_layer {
     }
     #[test]
     fn test_batched_inputs_forward() {
-        let mut layer = DenseLayer::new(2, 3, Arc::new(Activation::ReLU {}));
+        let mut layer = Dense::new(2, 3, Arc::new(Activation::ReLU {}));
         layer.weights = Weights {
             data: arr2(&[[2.0, 0.0], [0.0, 2.0], [0.0, 1.0]]),
         };

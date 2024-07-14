@@ -1,10 +1,10 @@
-use crate::{activation::Activate, layer::DenseLayer, loss::LossGrad, optimizer::Optimization};
+use crate::{activation::Activate, layer::Dense, loss::Grad, optimizer::Optimization};
 use ndarray::Array2;
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct Network<L: LossGrad, O: Optimization> {
-    layers: Vec<DenseLayer>,
+pub struct Network<L: Grad, O: Optimization> {
+    layers: Vec<Dense>,
     loss: L,
     optimizer: O,
     epochs: i32,
@@ -16,7 +16,7 @@ pub struct Network<L: LossGrad, O: Optimization> {
 //     }
 // }
 
-impl<L: LossGrad, O: Optimization> Network<L, O> {
+impl<L: Grad, O: Optimization> Network<L, O> {
     pub fn new(
         architecture: &Vec<usize>,
         activations: &[Arc<dyn Activate>],
@@ -29,7 +29,7 @@ impl<L: LossGrad, O: Optimization> Network<L, O> {
                 let num_neurons_in_next_layer = architecture[idx + 1];
                 // Now we can simply clone the Arc, which is cheap
                 let activation = activations[idx].clone();
-                layers.push(DenseLayer::new(
+                layers.push(Dense::new(
                     num_neurons,
                     num_neurons_in_next_layer,
                     activation,
@@ -45,7 +45,7 @@ impl<L: LossGrad, O: Optimization> Network<L, O> {
         }
     }
 
-    pub fn add_layer(&mut self, layer: DenseLayer) {
+    pub fn add_layer(&mut self, layer: Dense) {
         self.layers.push(layer);
     }
 
@@ -104,7 +104,7 @@ impl<L: LossGrad, O: Optimization> Network<L, O> {
     ) -> &mut Self {
         // TODO - Can probably just delete this method and use the optimizer directly
         self.optimizer
-            .apply_updates(&mut self.layers, &weight_updates, &bias_updates);
+            .apply_updates(&mut self.layers, weight_updates, bias_updates);
         self
     }
 
@@ -132,7 +132,7 @@ mod test_network {
 
     use crate::{
         activation::Activation,
-        loss::LossFunction,
+        loss::Metric,
         optimizer::{Adam, SGD},
     };
 
@@ -148,7 +148,7 @@ mod test_network {
         let net1 = Network::new(
             &architecture_1,
             &activations,
-            LossFunction::MSE,
+            Metric::MSE,
             Adam { lr: 0.001 },
         );
 
@@ -159,7 +159,7 @@ mod test_network {
         let net2 = Network::new(
             &architecture_2,
             &activations_2,
-            LossFunction::MSE,
+            Metric::MSE,
             Adam { lr: 0.001 },
         );
 
@@ -173,12 +173,7 @@ mod test_network {
             Arc::new(Activation::ReLU),
             Arc::new(Activation::LeakyReLU(0.1)),
         ];
-        let mut net = Network::new(
-            &architecture,
-            &activations,
-            LossFunction::MSE,
-            Adam { lr: 0.001 },
-        );
+        let mut net = Network::new(&architecture, &activations, Metric::MSE, Adam { lr: 0.001 });
 
         let input = arr2(&[[1.0]]);
         let targets = arr2(&[[2.0]]);
@@ -195,12 +190,7 @@ mod test_network {
             Arc::new(Activation::ReLU),
             Arc::new(Activation::LeakyReLU(0.1)),
         ];
-        let mut net = Network::new(
-            &architecture,
-            &activations,
-            LossFunction::MSE,
-            SGD { lr: 0.001 },
-        );
+        let mut net = Network::new(&architecture, &activations, Metric::MSE, SGD { lr: 0.001 });
 
         // Input is a batch of 2 2D input vectors
         let input = arr2(&[[1.0, 2.0], [3.0, 4.5]]);
@@ -219,8 +209,8 @@ mod test_network {
 
         // Example assertion: check if the trained output is closer to the targets than the initial output
         // This requires calculating the loss for both and comparing them
-        let initial_loss = LossFunction::MSE.calculate_loss(&initial_output, &targets);
-        let trained_loss = LossFunction::MSE.calculate_loss(&trained_output, &targets);
+        let initial_loss = Metric::MSE.calculate_loss(&initial_output, &targets);
+        let trained_loss = Metric::MSE.calculate_loss(&trained_output, &targets);
         println!("{initial_loss}, {trained_loss}");
         assert!(
             trained_loss < initial_loss,

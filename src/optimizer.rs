@@ -1,11 +1,11 @@
 use ndarray::Array2;
 
-use crate::layer::DenseLayer;
+use crate::layer::Dense;
 // TODO - Also should make into Enums
 pub trait Optimization {
     fn apply_updates(
         &self,
-        layers: &mut Vec<DenseLayer>,
+        layers: &mut Vec<Dense>,
         weight_updates: &[Array2<f64>],
         bias_updates: &[Array2<f64>],
     );
@@ -21,7 +21,7 @@ pub struct SGD {
 impl Optimization for Adam {
     fn apply_updates(
         &self,
-        _layers: &mut Vec<DenseLayer>,
+        _layers: &mut Vec<Dense>,
         _weight_updates: &[Array2<f64>],
         _bias_updates: &[Array2<f64>],
     ) {
@@ -32,7 +32,7 @@ impl Optimization for Adam {
 impl Optimization for SGD {
     fn apply_updates(
         &self,
-        layers: &mut Vec<DenseLayer>,
+        layers: &mut Vec<Dense>,
         weight_updates: &[Array2<f64>],
         bias_updates: &[Array2<f64>],
     ) {

@@ -1,18 +1,18 @@
 /// Loss functions
 use ndarray::{Array2, Zip};
 
-pub trait LossGrad {
+pub trait Grad {
     fn calculate_loss(&self, predictions: &Array2<f64>, targets: &Array2<f64>) -> f64;
     fn calculate_gradient(&self, predictions: &Array2<f64>, targets: &Array2<f64>) -> Array2<f64>;
 }
 
 /// Enum to represent different types of loss functions.
-pub enum LossFunction {
+pub enum Metric {
     MSE,
     MAE,
 }
 
-impl LossGrad for LossFunction {
+impl Grad for Metric {
     fn calculate_loss(&self, predictions: &Array2<f64>, targets: &Array2<f64>) -> f64 {
         match self {
             Self::MSE => mse(predictions, targets),
@@ -27,6 +27,7 @@ impl LossGrad for LossFunction {
     }
 }
 
+#[allow(clippy::cast_precision_loss)]
 fn mse(predictions: &Array2<f64>, targets: &Array2<f64>) -> f64 {
     let n = predictions.len() as f64;
     Zip::from(predictions)
@@ -40,6 +41,7 @@ fn mse_gradient(predictions: &Array2<f64>, targets: &Array2<f64>) -> Array2<f64>
     2.0 * (predictions - targets)
 }
 
+#[allow(clippy::cast_precision_loss)]
 fn mae(predictions: &Array2<f64>, targets: &Array2<f64>) -> f64 {
     let n = predictions.len() as f64;
     Zip::from(predictions)
@@ -52,6 +54,7 @@ fn mae_gradient(predictions: &Array2<f64>, targets: &Array2<f64>) -> Array2<f64>
 }
 
 #[cfg(test)]
+#[allow(clippy::float_cmp)]
 mod test_loss_functions {
 
     use super::*;
@@ -61,7 +64,7 @@ mod test_loss_functions {
         let predictions = Array2::from_elem([1, 5], 6.0);
         let targets = Array2::from_elem([1, 5], 1.0);
 
-        let mse = LossFunction::MSE;
+        let mse = Metric::MSE;
         let result = mse.calculate_loss(&predictions, &targets);
         println!("MSE Loss: {result}");
         // The average difference is 5.0, so MSE = 25.0
@@ -76,7 +79,7 @@ mod test_loss_functions {
         let predictions = Array2::from_elem([1, 5], 2.0);
         let targets = Array2::from_elem([1, 5], 1.0);
 
-        let mae = LossFunction::MAE;
+        let mae = Metric::MAE;
         let result = mae.calculate_loss(&predictions, &targets);
         println!("MAE Loss: {result}");
         assert_eq!(result, 1.0);
