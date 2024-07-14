@@ -1,9 +1,9 @@
-use crate::{activation::Activate, layer::DenseLayer, loss::Loss, optimizer::Optimization};
+use crate::{activation::Activate, layer::DenseLayer, loss::LossGrad, optimizer::Optimization};
 use ndarray::Array2;
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct Network<L: Loss, O: Optimization> {
+pub struct Network<L: LossGrad, O: Optimization> {
     layers: Vec<DenseLayer>,
     loss: L,
     optimizer: O,
@@ -16,7 +16,7 @@ pub struct Network<L: Loss, O: Optimization> {
 //     }
 // }
 
-impl<L: Loss, O: Optimization> Network<L, O> {
+impl<L: LossGrad, O: Optimization> Network<L, O> {
     pub fn new(
         architecture: &Vec<usize>,
         activations: &[Arc<dyn Activate>],
@@ -132,7 +132,7 @@ mod test_network {
 
     use crate::{
         activation::Activation,
-        loss::MeanSquaredError,
+        loss::LossFunction,
         optimizer::{Adam, SGD},
     };
 
@@ -148,7 +148,7 @@ mod test_network {
         let net1 = Network::new(
             &architecture_1,
             &activations,
-            MeanSquaredError,
+            LossFunction::MSE,
             Adam { lr: 0.001 },
         );
 
@@ -159,7 +159,7 @@ mod test_network {
         let net2 = Network::new(
             &architecture_2,
             &activations_2,
-            MeanSquaredError,
+            LossFunction::MSE,
             Adam { lr: 0.001 },
         );
 
@@ -176,7 +176,7 @@ mod test_network {
         let mut net = Network::new(
             &architecture,
             &activations,
-            MeanSquaredError,
+            LossFunction::MSE,
             Adam { lr: 0.001 },
         );
 
@@ -198,7 +198,7 @@ mod test_network {
         let mut net = Network::new(
             &architecture,
             &activations,
-            MeanSquaredError,
+            LossFunction::MSE,
             SGD { lr: 0.001 },
         );
 
@@ -219,8 +219,8 @@ mod test_network {
 
         // Example assertion: check if the trained output is closer to the targets than the initial output
         // This requires calculating the loss for both and comparing them
-        let initial_loss = MeanSquaredError.calculate_loss(&initial_output, &targets);
-        let trained_loss = MeanSquaredError.calculate_loss(&trained_output, &targets);
+        let initial_loss = LossFunction::MSE.calculate_loss(&initial_output, &targets);
+        let trained_loss = LossFunction::MSE.calculate_loss(&trained_output, &targets);
         println!("{initial_loss}, {trained_loss}");
         assert!(
             trained_loss < initial_loss,

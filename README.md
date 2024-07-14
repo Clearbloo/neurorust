@@ -6,3 +6,4 @@ TODO
 - [ ] Add opitmizers (ADAM and SGD)
 - [ ] Add a utils
 - [x] Add tests
+- [ ] Naming consistency between Loss and Activation
