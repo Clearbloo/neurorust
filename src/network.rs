@@ -124,6 +124,20 @@ impl<L: Grad, O: Optimization> Network<L, O> {
             self.update_parameters(&weight_updates, &bias_updates);
         }
     }
+
+    pub fn get_params(self) {
+        let mut weights: Vec<Array2<f64>> = vec![];
+        for layer in self.layers {
+            let mut w = vec![layer.weights.data];
+            weights.append(&mut w);
+        }
+    }
+
+    pub fn load_params(self, params: Vec<Array2<f64>>) {
+        for (i, mut layer) in self.layers.into_iter().enumerate() {
+            layer.weights.data = params[i].clone()
+        }
+    }
 }
 
 #[cfg(test)]
