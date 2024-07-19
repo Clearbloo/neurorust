@@ -2,7 +2,7 @@ use ndarray::Array2;
 
 pub trait Activate {
     fn activate(&self, input: &Array2<f64>) -> Array2<f64>;
-    fn calculate_gradient(&self, output: &Array2<f64>) -> Array2<f64>;
+    fn calculate_gradient(&self, output_gradient: &Array2<f64>) -> Array2<f64>;
 }
 
 #[derive(Debug)]
@@ -21,11 +21,11 @@ impl Activate for Activation {
             Self::Sigmoid => sigmoid(x),
         }
     }
-    fn calculate_gradient(&self, output: &Array2<f64>) -> Array2<f64> {
+    fn calculate_gradient(&self, output_gradient: &Array2<f64>) -> Array2<f64> {
         match self {
-            Self::ReLU => relu_gradient(output),
-            Self::LeakyReLU(slope) => leaky_relu_gradient(output, *slope),
-            Self::Sigmoid => sigmoid_gradient(output),
+            Self::ReLU => relu_gradient(output_gradient),
+            Self::LeakyReLU(slope) => leaky_relu_gradient(output_gradient, *slope),
+            Self::Sigmoid => sigmoid_gradient(output_gradient),
         }
     }
 }
@@ -43,16 +43,18 @@ fn sigmoid(input: &Array2<f64>) -> Array2<f64> {
     input.map(|x| 1.0 / (1.0 + (-x).exp()))
 }
 
-fn relu_gradient(input: &Array2<f64>) -> Array2<f64> {
-    input.mapv(|x| if x > 0.0 { 1.0 } else { 0.0 })
+// FIXME - I think these gradients are wrong. Need to think whether I want this to return just the activation gradient
+// or the full gradient. As in just that part of the chain rule (du/dx) or the dy/du du/dx
+fn relu_gradient(output_grad: &Array2<f64>) -> Array2<f64> {
+    output_grad.mapv(|x| if x > 0.0 { x } else { 0.0 })
 }
 
-fn leaky_relu_gradient(output: &Array2<f64>, slope: f64) -> Array2<f64> {
-    output.mapv(|x| if x > 0.0 { 1.0 } else { slope })
+fn leaky_relu_gradient(output_grad: &Array2<f64>, slope: f64) -> Array2<f64> {
+    output_grad.mapv(|x| if x > 0.0 { x } else { slope * x })
 }
 
-fn sigmoid_gradient(output: &Array2<f64>) -> Array2<f64> {
-    output.mapv(|x| x * (1.0 - x))
+fn sigmoid_gradient(output_grad: &Array2<f64>) -> Array2<f64> {
+    output_grad.mapv(|x| x * (1.0 - x) * x)
 }
 
 #[cfg(test)]
@@ -69,6 +71,6 @@ mod test_activations {
         assert_eq!(result, arr2(&[[1.0, 0.0], [2.0, 0.0]]));
 
         let act_grad = relu.calculate_gradient(&result);
-        assert_eq!(act_grad, arr2(&[[1.0, 0.0], [1.0, 0.0]]));
+        assert_eq!(act_grad, arr2(&[[1.0, 0.0], [2.0, 0.0]]));
     }
 }

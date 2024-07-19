@@ -40,13 +40,11 @@ impl Optimization for SGD {
         for (i, layer) in layers.iter_mut().rev().enumerate() {
             let layer_weight_update = self.lr * &weight_updates[i];
 
-            layer.weights.data += &layer_weight_update;
-
-            println!("All bias updates {bias_updates:?}");
+            layer.weights.data -= &layer_weight_update;
 
             let layer_bias_update = self.lr * &bias_updates[i];
 
-            layer.biases.data += &layer_bias_update;
+            layer.biases.data -= &layer_bias_update;
         }
     }
 }

@@ -93,13 +93,10 @@ impl Dense {
     // Compute gradient of the loss with respect to biases
     #[must_use]
     pub fn grad_biases(&self, activation_gradient: &Array2<f64>) -> Array2<f64> {
-        println!("activation_gradient {activation_gradient:?}");
-        let bias_grad = activation_gradient
+        activation_gradient
             .sum_axis(Axis(1))
             .insert_axis(Axis(1))
-            .to_owned();
-        println!("Bias gradient:\n {bias_grad}");
-        bias_grad
+            .to_owned()
     }
 
     #[must_use]
@@ -245,12 +242,21 @@ mod test_layer {
             layer.grad_layer(&mock_input_grad_of_next_layer);
 
         let expected_weight_gradient = arr2(&[
-            [102.8, 239_824.923_234],
-            [102.8, 239_824.923_234],
-            [102.8, 239_824.923_234],
-        ]); // FIXME - Update when implemented
-        let expected_bias_gradient = arr2(&[[5.0], [5.0], [5.0]]); // FIXME - Update when implemented
-        let expected_input_gradient = arr2(&[[1.6], [2.8]]);
+            [452.84000000000003, 1054064.3422296],
+            [2299.6049999999996, 5671881.5344841],
+            [892.13, 768699.8043488],
+        ]);
+        let expected_bias_gradient = arr2(&[[11.4], [61.25], [254.20000000000002]]);
+        let expected_input_gradient = arr2(&[
+            [
+                6.550000000000001,
+                3.4200000000000004,
+                8.76,
+                26.130000000000003,
+                28.215,
+            ],
+            [12.87, 540.4499999999999, 13.19, 29.59, 19.185],
+        ]);
         println!(
             "Wgrad:\n{weight_gradient},\n Bgrad:\n{bias_gradient},\n Igrad:\n{input_gradient}"
         );

@@ -41,7 +41,7 @@ impl<L: Grad, O: Optimization> Network<L, O> {
             layers,
             loss,
             optimizer,
-            epochs: 50,
+            epochs: 5,
         }
     }
 
@@ -77,6 +77,7 @@ impl<L: Grad, O: Optimization> Network<L, O> {
     ) -> (Vec<Array2<f64>>, Vec<Array2<f64>>) {
         // Now, iterate over layers with mutable access
         let loss_gradient = self.calculate_loss_gradient(outputs, targets);
+        println!("Loss gradient: {}", loss_gradient);
 
         // This should be initialized with the gradient of the loss function w.r.t the output of the last layer.
         let mut output_gradient: Array2<f64> = loss_gradient;
@@ -88,6 +89,13 @@ impl<L: Grad, O: Optimization> Network<L, O> {
         for layer in self.layers.iter_mut().rev() {
             let (weight_gradient, bias_gradient, input_gradient) =
                 layer.grad_layer(&output_gradient);
+            println!("Gradients after backwards pass");
+            println!(
+                "W:\n{:?}\n B:\n{:?}\n I:\n{:?}",
+                weight_gradient.clone(),
+                bias_gradient.clone(),
+                input_gradient.clone()
+            );
             weight_updates.push(weight_gradient);
             bias_updates.push(bias_gradient);
 
@@ -125,12 +133,13 @@ impl<L: Grad, O: Optimization> Network<L, O> {
         }
     }
 
-    pub fn get_params(self) {
+    pub fn get_params(&self) -> Vec<Array2<f64>> {
         let mut weights: Vec<Array2<f64>> = vec![];
-        for layer in self.layers {
-            let mut w = vec![layer.weights.data];
+        for layer in &self.layers {
+            let mut w = vec![layer.weights.data.clone()];
             weights.append(&mut w);
         }
+        weights
     }
 
     pub fn load_params(self, params: Vec<Array2<f64>>) {
@@ -219,7 +228,7 @@ mod test_network {
 
         // Capture the output after training
         let trained_output = net.forward(&input);
-        println!("after training: {trained_output}");
+        println!("output after training: {trained_output}");
 
         // Example assertion: check if the trained output is closer to the targets than the initial output
         // This requires calculating the loss for both and comparing them
