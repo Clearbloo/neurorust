@@ -239,5 +239,6 @@ mod test_network {
             trained_loss < initial_loss,
             "Training should reduce the loss"
         );
+        assert!(trained_loss < 1e6, "Loss should be near 0");
     }
 }
