@@ -1,27 +1,25 @@
-use crate::{activation::Activate, layer::Dense, loss::Grad, optimizer::Optimization};
+use crate::{
+    activation::Activation,
+    layer::{Dense, LayerInitType},
+    loss::Metric,
+    optimizer::Optimizer,
+};
+use log::{debug, info};
 use ndarray::Array2;
-use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct Network<L: Grad, O: Optimization> {
+pub struct Network {
     layers: Vec<Dense>,
-    loss: L,
-    optimizer: O,
-    epochs: i32,
+    loss: Metric,
+    optimizer: Optimizer,
 }
 
-// impl<A: Activate, L: Loss, O: Optimization> Default for Network<A, L, O> {
-//     fn default() -> Self {
-//         Self::new(vec![1], MeanAbsoluteError,Adam)
-//     }
-// }
-
-impl<L: Grad, O: Optimization> Network<L, O> {
+impl Network {
     pub fn new(
-        architecture: &Vec<usize>,
-        activations: &[Arc<dyn Activate>],
-        loss: L,
-        optimizer: O,
+        architecture: &[usize],
+        activations: &[Activation],
+        loss: Metric,
+        optimizer: Optimizer,
     ) -> Self {
         let mut layers = Vec::new();
         for (idx, &num_neurons) in architecture.iter().enumerate() {
@@ -33,6 +31,7 @@ impl<L: Grad, O: Optimization> Network<L, O> {
                     num_neurons,
                     num_neurons_in_next_layer,
                     activation,
+                    LayerInitType::He,
                 ));
             }
         }
@@ -41,7 +40,6 @@ impl<L: Grad, O: Optimization> Network<L, O> {
             layers,
             loss,
             optimizer,
-            epochs: 5,
         }
     }
 
@@ -77,7 +75,6 @@ impl<L: Grad, O: Optimization> Network<L, O> {
     ) -> (Vec<Array2<f64>>, Vec<Array2<f64>>) {
         // Now, iterate over layers with mutable access
         let loss_gradient = self.calculate_loss_gradient(outputs, targets);
-        println!("Loss gradient: {}", loss_gradient);
 
         // This should be initialized with the gradient of the loss function w.r.t the output of the last layer.
         let mut output_gradient: Array2<f64> = loss_gradient;
@@ -89,31 +86,14 @@ impl<L: Grad, O: Optimization> Network<L, O> {
         for layer in self.layers.iter_mut().rev() {
             let (weight_gradient, bias_gradient, input_gradient) =
                 layer.grad_layer(&output_gradient);
-            println!("Gradients after backwards pass");
-            println!(
-                "W:\n{:?}\n B:\n{:?}\n I:\n{:?}",
-                weight_gradient.clone(),
-                bias_gradient.clone(),
-                input_gradient.clone()
-            );
             weight_updates.push(weight_gradient);
             bias_updates.push(bias_gradient);
-
             output_gradient = input_gradient; // Prepare for the next iteration
         }
+        weight_updates.reverse();
+        bias_updates.reverse();
 
         (weight_updates, bias_updates)
-    }
-
-    fn update_parameters(
-        &mut self,
-        weight_updates: &[Array2<f64>],
-        bias_updates: &[Array2<f64>],
-    ) -> &mut Self {
-        // TODO - Can probably just delete this method and use the optimizer directly
-        self.optimizer
-            .apply_updates(&mut self.layers, weight_updates, bias_updates);
-        self
     }
 
     /// Gets the input for a specific layer.
@@ -125,11 +105,28 @@ impl<L: Grad, O: Optimization> Network<L, O> {
 
     /// Each loop in epoch, forward pass, calculate loss, backwards pass to calculate gradients
     /// Update parameters (using optimizer), repeat.
-    pub fn train(&mut self, input: &Array2<f64>, targets: &Array2<f64>) {
-        for _e in 0..self.epochs {
+    pub fn train(&mut self, epochs: usize, input: &Array2<f64>, targets: &Array2<f64>) {
+        info!("Targets: {targets}");
+        info!("Inputs: {input}");
+        for e in 0..epochs {
             let outputs = self.forward(input);
             let (weight_updates, bias_updates) = self.backwards(&outputs, targets);
-            self.update_parameters(&weight_updates, &bias_updates);
+            let loss = self.loss.calculate_loss(&outputs, targets);
+            if loss.is_nan() {
+                panic!("found NAN in loss: {}", loss);
+            }
+            debug!("Epoch {e}");
+            debug!("Layers:\n{:?}", self.layers);
+            debug!("Outputs: {outputs}");
+            debug!("Loss: {}", loss);
+            debug!("Updates: {weight_updates:?}, {bias_updates:?}");
+            if e % 10 == 0 {
+                info!("Epoch {e}");
+                info!("Loss: {}", self.loss.calculate_loss(&outputs, targets));
+                info!("Outputs: {outputs}");
+            }
+            self.optimizer
+                .apply_updates(&mut self.layers, &weight_updates, &bias_updates);
         }
     }
 
@@ -151,94 +148,136 @@ impl<L: Grad, O: Optimization> Network<L, O> {
 
 #[cfg(test)]
 mod test_network {
+    use super::*;
+    use crate::{activation::Activation, loss::Metric, utils::min_max_scale};
+    use ctor::ctor;
+    use log::debug;
     use ndarray::arr2;
 
-    use crate::{
-        activation::Activation,
-        loss::Metric,
-        optimizer::{Adam, SGD},
-    };
-
-    use super::*;
+    #[ctor]
+    fn init_logger() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
 
     #[test]
     fn test_init() {
         let architecture_1 = vec![1, 2, 1];
-        let activations: Vec<Arc<dyn Activate>> = vec![
-            Arc::new(Activation::ReLU),
-            Arc::new(Activation::LeakyReLU(0.1)),
-        ];
+        let activations: Vec<Activation> = vec![Activation::ReLU, Activation::LeakyReLU(0.1)];
         let net1 = Network::new(
             &architecture_1,
             &activations,
             Metric::MSE,
-            Adam { lr: 0.001 },
+            Optimizer::Adam { lr: 0.001 },
         );
 
         assert_eq!(net1.layers.len(), 2);
 
         let architecture_2 = vec![1, 1];
-        let activations_2: Vec<Arc<dyn Activate>> = vec![Arc::new(Activation::ReLU)];
+        let activations_2: Vec<Activation> = vec![Activation::ReLU];
         let net2 = Network::new(
             &architecture_2,
             &activations_2,
             Metric::MSE,
-            Adam { lr: 0.001 },
+            Optimizer::Adam { lr: 0.001 },
         );
 
         assert_eq!(net2.layers.len(), 1);
     }
 
     #[test]
-    fn test_train() {
+    fn test_train_updates_weights() {
+        // This test should be usurped by the below eventually
         let architecture = vec![1, 2, 1];
-        let activations: Vec<Arc<dyn Activate>> = vec![
-            Arc::new(Activation::ReLU),
-            Arc::new(Activation::LeakyReLU(0.1)),
-        ];
-        let mut net = Network::new(&architecture, &activations, Metric::MSE, Adam { lr: 0.001 });
+        let activations: Vec<Activation> =
+            vec![Activation::LeakyReLU(0.1), Activation::LeakyReLU(0.1)];
+        let mut net = Network::new(
+            &architecture,
+            &activations,
+            Metric::MSE,
+            Optimizer::GD { lr: 0.1 },
+        );
 
         let input = arr2(&[[1.0]]);
         let targets = arr2(&[[2.0]]);
+        let y_hat1 = net.forward(&input);
 
-        net.train(&input, &targets);
+        net.train(50, &input, &targets);
+        let y_hat2 = net.forward(&input);
+        assert_ne!(y_hat1, y_hat2);
     }
 
     #[test]
-    fn test_train_updates_network_outputs() {
-        use std::env;
-        env::set_var("RUST_BACKTRACE", "1");
-        let architecture = vec![2, 2, 1];
-        let activations: Vec<Arc<dyn Activate>> = vec![
-            Arc::new(Activation::ReLU),
-            Arc::new(Activation::LeakyReLU(0.1)),
-        ];
-        let mut net = Network::new(&architecture, &activations, Metric::MSE, SGD { lr: 0.001 });
+    fn test_train_reduces_loss_simple() {
+        // Test 1 - simple input output
+        // Should merge this with the one below
+        let architecture = vec![1, 1];
+        let activations: Vec<Activation> = vec![Activation::LeakyReLU(0.1)];
+        let mut net = Network::new(
+            &architecture,
+            &activations,
+            Metric::MSE,
+            Optimizer::GD { lr: 0.01 },
+        );
 
-        // Input is a batch of 2 2D input vectors
-        let input = arr2(&[[1.0, 2.0], [3.0, 4.5]]);
-        let targets = arr2(&[[2.0, 9.8]]);
+        let input = arr2(&[[1.0]]);
+        let targets = arr2(&[[2.0]]);
+        let y1 = net.forward(&input);
 
-        // Capture the initial output before training
-        let initial_output = net.forward(&input);
-        println!("inital output: {initial_output}");
+        net.train(1000, &input, &targets);
+        let y2 = net.forward(&input);
+        assert_ne!(y1, y2);
 
-        // Train the network
-        net.train(&input, &targets);
-
-        // Capture the output after training
-        let trained_output = net.forward(&input);
-        println!("output after training: {trained_output}");
-
-        // Example assertion: check if the trained output is closer to the targets than the initial output
-        // This requires calculating the loss for both and comparing them
-        let initial_loss = Metric::MSE.calculate_loss(&initial_output, &targets);
-        let trained_loss = Metric::MSE.calculate_loss(&trained_output, &targets);
-        println!("{initial_loss}, {trained_loss}");
+        let initial_loss = Metric::MSE.calculate_loss(&y1, &targets);
+        let trained_loss = Metric::MSE.calculate_loss(&y2, &targets);
+        debug!("Initial loss: {initial_loss}, Trained_loss: {trained_loss}");
         assert!(
             trained_loss < initial_loss,
             "Training should reduce the loss"
         );
-        assert!(trained_loss < 1e6, "Loss should be near 0");
+        assert!(trained_loss < 1e-6, "Loss should be near 0");
+    }
+
+    #[test]
+    fn test_train_reduces_loss_2() {
+        // Test 2 - Hidden layer
+        let architecture = vec![2, 4, 1];
+        let activations: Vec<Activation> =
+            vec![Activation::LeakyReLU(0.9), Activation::LeakyReLU(0.9)];
+        let mut net = Network::new(
+            &architecture,
+            &activations,
+            Metric::MSE,
+            Optimizer::GD { lr: 0.1 },
+        );
+
+        // Input is a batch of 2 2D input vectors
+        let input = min_max_scale(&arr2(&[[1.0, 2.0, 5.0], [3.0, 4.5, 6.0]]));
+        let targets = min_max_scale(&arr2(&[[2.0, -1.8, 4.0]]));
+
+        // Test the shapes of the output
+        let y1 = net.forward(&arr2(&[[1.0], [3.0]]));
+        assert_eq!(y1.shape(), [1, 1], "One input should give one output");
+
+        // Capture the initial output before training
+        let y2 = net.forward(&input);
+        assert_eq!(y2.shape(), [1, 3], "Three inputs gives three outputs");
+
+        // Train the network
+        net.train(1000, &input, &targets);
+
+        // Capture the output after training
+        let trained_output = net.forward(&input);
+        info!("output after training: {trained_output}");
+
+        // Example assertion: check if the trained output is closer to the targets than the initial output
+        // This requires calculating the loss for both and comparing them
+        let initial_loss = Metric::MSE.calculate_loss(&y2, &targets);
+        let trained_loss = Metric::MSE.calculate_loss(&trained_output, &targets);
+        debug!("Initial loss: {initial_loss}, Trained_loss: {trained_loss}");
+        assert!(
+            trained_loss < initial_loss,
+            "Training should reduce the loss"
+        );
+        assert!(trained_loss < 1e-1, "Loss should be near 0: {trained_loss}");
     }
 }

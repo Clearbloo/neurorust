@@ -1,50 +1,47 @@
+use crate::layer::Dense;
 use ndarray::Array2;
 
-use crate::layer::Dense;
-// TODO - Also should make into Enums
-pub trait Optimization {
-    fn apply_updates(
-        &self,
-        layers: &mut Vec<Dense>,
-        weight_updates: &[Array2<f64>],
-        bias_updates: &[Array2<f64>],
-    );
+#[derive(Debug, Clone)]
+pub enum Optimizer {
+    Adam {
+        lr: f64,
+        // beta1: f64,
+        // beta2: f64,
+        // epsilon: f64,
+        // m: Vec<Array2<f64>>,
+        // v: Vec<Array2<f64>>,
+    },
+    SGD {
+        lr: f64,
+    },
+    GD {
+        lr: f64,
+    },
 }
 
-pub struct Adam {
-    pub lr: f64,
-}
-pub struct SGD {
-    pub lr: f64,
-}
-
-impl Optimization for Adam {
-    fn apply_updates(
+impl Optimizer {
+    pub fn apply_updates(
         &self,
-        _layers: &mut Vec<Dense>,
-        _weight_updates: &[Array2<f64>],
-        _bias_updates: &[Array2<f64>],
-    ) {
-        // todo!()
-    }
-}
-
-impl Optimization for SGD {
-    fn apply_updates(
-        &self,
-        layers: &mut Vec<Dense>,
+        layers: &mut [Dense],
         weight_updates: &[Array2<f64>],
         bias_updates: &[Array2<f64>],
     ) {
-        // TODO - Consider normalizing the weight update
-        for (i, layer) in layers.iter_mut().rev().enumerate() {
-            let layer_weight_update = self.lr * &weight_updates[i];
-
-            layer.weights.data -= &layer_weight_update;
-
-            let layer_bias_update = self.lr * &bias_updates[i];
-
-            layer.biases.data -= &layer_bias_update;
+        match self {
+            Self::Adam { .. } => todo!(),
+            Self::SGD { .. } => todo!(),
+            Self::GD { lr } => {
+                // TODO - Consider normalizing the updates
+                for (i, layer) in layers.iter_mut().enumerate() {
+                    layer.weights.data -= &(*lr * &weight_updates[i]);
+                    layer.biases.data -= &(*lr * &bias_updates[i]);
+                }
+            }
         }
+    }
+
+    #[allow(dead_code)]
+    fn normalize_array(&self, a: &Array2<f64>) -> Option<Array2<f64>> {
+        let avg = a.mean()?;
+        Some(a / avg)
     }
 }
