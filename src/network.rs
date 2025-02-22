@@ -2,6 +2,7 @@ use crate::{
     activation::Activation,
     layer::{Dense, InitType},
     loss::Metric,
+    model::{Predictor, Trainable},
     optimizer::Optimizer,
 };
 use log::{debug, info};
@@ -12,6 +13,7 @@ pub struct Network {
     layers: Vec<Dense>,
     loss: Metric,
     optimizer: Optimizer,
+    epochs: u32,
 }
 
 impl Network {
@@ -21,6 +23,7 @@ impl Network {
         activations: &[Activation],
         loss: Metric,
         optimizer: Optimizer,
+        epochs: u32,
     ) -> Self {
         let mut layers = Vec::new();
         for (idx, &num_neurons) in architecture.iter().enumerate() {
@@ -41,6 +44,7 @@ impl Network {
             layers,
             loss,
             optimizer,
+            epochs,
         }
     }
 
@@ -107,31 +111,6 @@ impl Network {
         self.layers[layer_index].input.clone()
     }
 
-    /// Each loop in epoch, forward pass, calculate loss, backwards pass to calculate gradients
-    /// Update parameters (using optimizer), repeat.
-    pub fn train(&mut self, epochs: usize, input: &Array2<f64>, targets: &Array2<f64>) {
-        info!("Targets: {targets}");
-        info!("Inputs: {input}");
-        for e in 0..epochs {
-            let outputs = self.forward(input);
-            let (weight_updates, bias_updates) = self.backwards(&outputs, targets);
-            let loss = self.loss.calculate_loss(&outputs, targets);
-            assert!(!loss.is_nan(), "found NAN in loss: {loss}");
-            debug!("Epoch {e}");
-            debug!("Layers:\n{:?}", self.layers);
-            debug!("Outputs: {outputs}");
-            debug!("Loss: {}", loss);
-            debug!("Updates: {weight_updates:?}, {bias_updates:?}");
-            if e % 10 == 0 {
-                info!("Epoch {e}");
-                info!("Loss: {}", self.loss.calculate_loss(&outputs, targets));
-                info!("Outputs: {outputs}");
-            }
-            self.optimizer
-                .apply_updates(&mut self.layers, &weight_updates, &bias_updates);
-        }
-    }
-
     #[must_use]
     pub fn get_params(&self) -> Vec<Array2<f64>> {
         let mut weights: Vec<Array2<f64>> = vec![];
@@ -149,6 +128,47 @@ impl Network {
     }
 }
 
+impl Predictor for Network {
+    type Input = Array2<f64>;
+    type Output = Array2<f64>;
+
+    fn predict(&self, inputs: &Self::Input) -> Self::Output {
+        self.layers
+            .iter()
+            .fold(inputs.clone(), |acc, layer| layer.predict(&acc))
+    }
+}
+
+impl Trainable for Network {
+    type Data = Array2<f64>;
+    type Target = Array2<f64>;
+
+    /// Each loop in epoch, forward pass, calculate loss, backwards pass to calculate gradients
+    /// Update parameters (using optimizer), repeat.
+    fn train(&mut self, inputs: &Self::Data, targets: &Self::Target) -> impl Predictor {
+        info!("Targets: {targets}");
+        info!("Inputs: {inputs}");
+        for e in 0..self.epochs {
+            let outputs = self.forward(inputs);
+            let (weight_updates, bias_updates) = self.backwards(&outputs, targets);
+            let loss = self.loss.calculate_loss(&outputs, targets);
+            assert!(!loss.is_nan(), "found NAN in loss: {loss}");
+            debug!("Epoch {e}");
+            debug!("Layers:\n{:?}", self.layers);
+            debug!("Outputs: {outputs}");
+            debug!("Loss: {}", loss);
+            debug!("Updates: {weight_updates:?}, {bias_updates:?}");
+            if e % 10 == 0 {
+                info!("Epoch {e}");
+                info!("Loss: {}", self.loss.calculate_loss(&outputs, targets));
+                info!("Outputs: {outputs}");
+            }
+            self.optimizer
+                .apply_updates(&mut self.layers, &weight_updates, &bias_updates);
+        }
+        self.clone()
+    }
+}
 #[cfg(test)]
 mod test_network {
     use super::*;
@@ -171,6 +191,7 @@ mod test_network {
             &activations,
             Metric::MSE,
             Optimizer::Adam { lr: 0.001 },
+            1,
         );
 
         assert_eq!(net1.layers.len(), 2);
@@ -182,6 +203,7 @@ mod test_network {
             &activations_2,
             Metric::MSE,
             Optimizer::Adam { lr: 0.001 },
+            1,
         );
 
         assert_eq!(net2.layers.len(), 1);
@@ -198,13 +220,14 @@ mod test_network {
             &activations,
             Metric::MSE,
             Optimizer::GD { lr: 0.1 },
+            50,
         );
 
         let input = arr2(&[[1.0]]);
         let targets = arr2(&[[2.0]]);
         let y_hat1 = net.forward(&input);
 
-        net.train(50, &input, &targets);
+        net.train(&input, &targets);
         let y_hat2 = net.forward(&input);
         assert_ne!(y_hat1, y_hat2);
     }
@@ -220,13 +243,14 @@ mod test_network {
             &activations,
             Metric::MSE,
             Optimizer::GD { lr: 0.01 },
+            1000,
         );
 
         let input = arr2(&[[1.0]]);
         let targets = arr2(&[[2.0]]);
         let y1 = net.forward(&input);
 
-        net.train(1000, &input, &targets);
+        net.train(&input, &targets);
         let y2 = net.forward(&input);
         assert_ne!(y1, y2);
 
@@ -251,6 +275,7 @@ mod test_network {
             &activations,
             Metric::MSE,
             Optimizer::GD { lr: 0.1 },
+            1000,
         );
 
         // Input is a batch of 2 2D input vectors
@@ -266,7 +291,7 @@ mod test_network {
         assert_eq!(y2.shape(), [1, 3], "Three inputs gives three outputs");
 
         // Train the network
-        net.train(1000, &input, &targets);
+        net.train(&input, &targets);
 
         // Capture the output after training
         let trained_output = net.forward(&input);

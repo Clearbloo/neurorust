@@ -113,6 +113,13 @@ impl Dense {
         self.activation.activate(&linear_output)
     }
 
+    pub fn predict(&self, input: &Array2<f64>) -> Array2<f64> {
+        let wx: Array2<f64> = self.weights.data.dot(input);
+        // Uses broadcasting rules for addition
+        let linear_output = &wx + &self.biases.data;
+        self.activation.activate(&linear_output)
+    }
+
     /// This function calculates the gradients of this layer
     /// 1. Apply the derivative of the activation function to the `output_gradient`.
     /// 2. Calculate gradient w.r.t weights using `grad_weights`.
