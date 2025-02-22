@@ -308,4 +308,7 @@ mod test_network {
         );
         assert!(trained_loss < 1e-1, "Loss should be near 0: {trained_loss}");
     }
+
+    #[test]
+    fn load_csv() {}
 }

@@ -10,7 +10,8 @@ pub enum Activation {
 }
 
 impl Activation {
-    #[must_use] pub fn activate(&self, x: &Array2<f64>) -> Array2<f64> {
+    #[must_use]
+    pub fn activate(&self, x: &Array2<f64>) -> Array2<f64> {
         match self {
             Self::Linear => x.clone(),
             Self::ReLU => relu(x),
@@ -20,7 +21,8 @@ impl Activation {
     }
     /// Returns the gradient of the activation function. Same shape as the
     /// `output_gradient` parameter
-    #[must_use] pub fn calculate_derivative(&self, pre_activation_output: &Array2<f64>) -> Array2<f64> {
+    #[must_use]
+    pub fn calculate_derivative(&self, pre_activation_output: &Array2<f64>) -> Array2<f64> {
         match self {
             Self::Linear => {
                 let x_dim = pre_activation_output.shape()[0];

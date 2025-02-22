@@ -8,13 +8,15 @@ pub enum Metric {
 }
 
 impl Metric {
-    #[must_use] pub fn calculate_loss(&self, predictions: &Array2<f64>, targets: &Array2<f64>) -> f64 {
+    #[must_use]
+    pub fn calculate_loss(&self, predictions: &Array2<f64>, targets: &Array2<f64>) -> f64 {
         match self {
             Self::MSE => mse(predictions, targets),
             Self::MAE => mae(predictions, targets),
         }
     }
-    #[must_use] pub fn calculate_gradient(
+    #[must_use]
+    pub fn calculate_gradient(
         &self,
         predictions: &Array2<f64>,
         targets: &Array2<f64>,
