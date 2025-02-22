@@ -3,13 +3,15 @@ use core::fmt::Debug;
 use ndarray::{Array2, Axis};
 use rand_distr::{Distribution, Normal, Uniform};
 
+type Matrix = Array2<f64>;
+
 #[derive(Clone)]
 pub struct Weights {
-    pub data: Array2<f64>,
+    pub data: Matrix,
 }
 #[derive(Clone)]
 pub struct Biases {
-    pub data: Array2<f64>,
+    pub data: Matrix,
 }
 
 // TODO - rename input to x and put input as a comment
@@ -20,8 +22,8 @@ pub struct Dense {
     pub weights: Weights,
     pub biases: Biases,
     pub activation: Activation,
-    pub input: Array2<f64>,
-    pub z: Array2<f64>, // pre-activation output
+    pub input: Matrix,
+    pub z: Matrix, // pre-activation output
 }
 
 pub enum InitType {
@@ -102,8 +104,8 @@ impl Dense {
         }
     }
 
-    pub fn forward(&mut self, input: &Array2<f64>) -> Array2<f64> {
-        let wx: Array2<f64> = self.weights.data.dot(input);
+    pub fn forward(&mut self, input: &Matrix) -> Matrix {
+        let wx: Matrix = self.weights.data.dot(input);
         // Uses broadcasting rules for addition
         let linear_output = &wx + &self.biases.data;
 
@@ -113,8 +115,8 @@ impl Dense {
         self.activation.activate(&linear_output)
     }
 
-    pub fn predict(&self, input: &Array2<f64>) -> Array2<f64> {
-        let wx: Array2<f64> = self.weights.data.dot(input);
+    pub fn predict(&self, input: &Matrix) -> Matrix {
+        let wx: Matrix = self.weights.data.dot(input);
         // Uses broadcasting rules for addition
         let linear_output = &wx + &self.biases.data;
         self.activation.activate(&linear_output)
@@ -129,10 +131,7 @@ impl Dense {
     ///
     /// TODO - rename this to just grad
     #[must_use]
-    pub fn grad_layer(
-        &self,
-        output_gradient: &Array2<f64>,
-    ) -> (Array2<f64>, Array2<f64>, Array2<f64>) {
+    pub fn grad_layer(&self, output_gradient: &Matrix) -> (Matrix, Matrix, Matrix) {
         // Compute activation derivative
         let activation_derivative = self.activation.calculate_derivative(&self.z);
         // Element-wise multiplication
@@ -149,14 +148,14 @@ impl Dense {
 
     /// Compute gradient of the loss with respect to weights
     #[must_use]
-    pub fn grad_weights(&self, activation_gradient: &Array2<f64>) -> Array2<f64> {
+    pub fn grad_weights(&self, activation_gradient: &Matrix) -> Matrix {
         let grad_weights_updates = activation_gradient.dot(&self.input.t());
         grad_weights_updates.to_owned()
     }
 
     /// Compute gradient of the loss with respect to biases
     #[must_use]
-    pub fn grad_biases(&self, activation_gradient: &Array2<f64>) -> Array2<f64> {
+    pub fn grad_biases(&self, activation_gradient: &Matrix) -> Matrix {
         activation_gradient
             .sum_axis(Axis(1))
             .insert_axis(Axis(1))
@@ -164,7 +163,7 @@ impl Dense {
     }
 
     #[must_use]
-    pub fn grad_input(&self, activation_gradient: &Array2<f64>) -> Array2<f64> {
+    pub fn grad_input(&self, activation_gradient: &Matrix) -> Matrix {
         let input_grad = self.weights.data.t().dot(activation_gradient);
         input_grad
     }
@@ -349,7 +348,7 @@ mod test_layer {
         let input = Array2::from_elem([2, 88], 0.0);
         layer.forward(&input);
 
-        let loss: Array2<f64> = Array2::from_elem([3, 88], 0.0);
+        let loss: Matrix = Array2::from_elem([3, 88], 0.0);
         let (w, b, i) = layer.grad_layer(&loss);
         for x in &w {
             assert!(x == &0.0);
