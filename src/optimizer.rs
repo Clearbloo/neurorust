@@ -1,5 +1,5 @@
 use crate::layer::Dense;
-use ndarray::Array2;
+use crate::utils::Matrix;
 
 #[derive(Debug, Clone)]
 pub enum Optimizer {
@@ -8,8 +8,8 @@ pub enum Optimizer {
         // beta1: f64,
         // beta2: f64,
         // epsilon: f64,
-        // m: Vec<Array2<f64>>,
-        // v: Vec<Array2<f64>>,
+        // m: Vec<Matrix>,
+        // v: Vec<Matrix>,
     },
     SGD {
         lr: f64,
@@ -23,8 +23,8 @@ impl Optimizer {
     pub fn apply_updates(
         &self,
         layers: &mut [Dense],
-        weight_updates: &[Array2<f64>],
-        bias_updates: &[Array2<f64>],
+        weight_updates: &[Matrix],
+        bias_updates: &[Matrix],
     ) {
         match self {
             Self::Adam { .. } => todo!(),
@@ -40,7 +40,7 @@ impl Optimizer {
     }
 
     #[allow(dead_code)]
-    fn normalize_array(&self, a: &Array2<f64>) -> Option<Array2<f64>> {
+    fn normalize_array(&self, a: &Matrix) -> Option<Matrix> {
         let avg = a.mean()?;
         Some(a / avg)
     }

@@ -1,9 +1,8 @@
 use crate::activation::Activation;
+use crate::utils::Matrix;
 use core::fmt::Debug;
 use ndarray::{Array2, Axis};
 use rand_distr::{Distribution, Normal, Uniform};
-
-type Matrix = Array2<f64>;
 
 #[derive(Clone)]
 pub struct Weights {

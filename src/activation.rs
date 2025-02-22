@@ -1,5 +1,5 @@
+use crate::utils::Matrix;
 use core::fmt::Debug;
-use ndarray::Array2;
 
 #[derive(Debug, Clone)]
 pub enum Activation {
@@ -11,7 +11,7 @@ pub enum Activation {
 
 impl Activation {
     #[must_use]
-    pub fn activate(&self, x: &Array2<f64>) -> Array2<f64> {
+    pub fn activate(&self, x: &Matrix) -> Matrix {
         match self {
             Self::Linear => x.clone(),
             Self::ReLU => relu(x),
@@ -22,12 +22,12 @@ impl Activation {
     /// Returns the gradient of the activation function. Same shape as the
     /// `output_gradient` parameter
     #[must_use]
-    pub fn calculate_derivative(&self, pre_activation_output: &Array2<f64>) -> Array2<f64> {
+    pub fn calculate_derivative(&self, pre_activation_output: &Matrix) -> Matrix {
         match self {
             Self::Linear => {
                 let x_dim = pre_activation_output.shape()[0];
                 let y_dim = pre_activation_output.shape()[1];
-                Array2::from_elem((x_dim, y_dim), 1.)
+                Matrix::from_elem((x_dim, y_dim), 1.)
             }
             Self::ReLU => relu_derivative(pre_activation_output),
             Self::LeakyReLU(slope) => leaky_relu_derivative(pre_activation_output, *slope),
@@ -37,27 +37,27 @@ impl Activation {
 }
 
 // Activation functions
-fn relu(input: &Array2<f64>) -> Array2<f64> {
+fn relu(input: &Matrix) -> Matrix {
     input.mapv(|x| if x > 0.0 { x } else { 0.0 })
 }
 
-fn leaky_relu(input: &Array2<f64>, slope: f64) -> Array2<f64> {
+fn leaky_relu(input: &Matrix, slope: f64) -> Matrix {
     input.mapv(|x| if x > 0.0 { x } else { slope * x })
 }
 
-fn sigmoid(input: &Array2<f64>) -> Array2<f64> {
+fn sigmoid(input: &Matrix) -> Matrix {
     input.mapv(|x| 1.0 / (1.0 + (-x).exp()))
 }
 
-fn relu_derivative(relu_output: &Array2<f64>) -> Array2<f64> {
+fn relu_derivative(relu_output: &Matrix) -> Matrix {
     relu_output.mapv(|x| if x > 0.0 { 1.0 } else { 0.0 })
 }
 
-fn leaky_relu_derivative(leaky_relu_output: &Array2<f64>, slope: f64) -> Array2<f64> {
+fn leaky_relu_derivative(leaky_relu_output: &Matrix, slope: f64) -> Matrix {
     leaky_relu_output.mapv(|x| if x > 0.0 { 1.0 } else { slope })
 }
 
-fn sigmoid_derivative(sigmoid_output: &Array2<f64>) -> Array2<f64> {
+fn sigmoid_derivative(sigmoid_output: &Matrix) -> Matrix {
     sigmoid_output * &(1.0 - sigmoid_output)
 }
 

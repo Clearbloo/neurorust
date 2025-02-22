@@ -4,9 +4,9 @@ use crate::{
     loss::Metric,
     model::{Predictor, Trainable},
     optimizer::Optimizer,
+    utils::Matrix,
 };
 use log::{debug, info};
-use ndarray::Array2;
 
 #[derive(Clone)]
 pub struct Network {
@@ -52,43 +52,35 @@ impl Network {
         self.layers.push(layer);
     }
 
-    pub fn forward(&mut self, input: &Array2<f64>) -> Array2<f64> {
+    pub fn forward(&mut self, input: &Matrix) -> Matrix {
         self.layers
             .iter_mut()
             .fold(input.clone(), |acc, layer| layer.forward(&acc))
     }
 
     #[must_use]
-    pub fn calculate_loss(&self, predictions: &Array2<f64>, targets: &Array2<f64>) -> f64 {
+    pub fn calculate_loss(&self, predictions: &Matrix, targets: &Matrix) -> f64 {
         self.loss.calculate_loss(predictions, targets)
     }
 
     // This method should implement the logic to perform a backward pass through the network,
     // updating weights and biases based on the gradient of the loss function with respect to the output.
     #[must_use]
-    pub fn calculate_loss_gradient(
-        &self,
-        predictions: &Array2<f64>,
-        targets: &Array2<f64>,
-    ) -> Array2<f64> {
+    pub fn calculate_loss_gradient(&self, predictions: &Matrix, targets: &Matrix) -> Matrix {
         self.loss.calculate_gradient(predictions, targets)
     }
 
     /// Performs backpropagation to update weights and biases of all layers.
-    pub fn backwards(
-        &mut self,
-        outputs: &Array2<f64>,
-        targets: &Array2<f64>,
-    ) -> (Vec<Array2<f64>>, Vec<Array2<f64>>) {
+    pub fn backwards(&mut self, outputs: &Matrix, targets: &Matrix) -> (Vec<Matrix>, Vec<Matrix>) {
         // Now, iterate over layers with mutable access
         let loss_gradient = self.calculate_loss_gradient(outputs, targets);
 
         // This should be initialized with the gradient of the loss function w.r.t the output of the last layer.
-        let mut output_gradient: Array2<f64> = loss_gradient;
+        let mut output_gradient: Matrix = loss_gradient;
 
         // Collect updates for each layer
-        let mut weight_updates: Vec<Array2<f64>> = Vec::new();
-        let mut bias_updates: Vec<Array2<f64>> = Vec::new();
+        let mut weight_updates: Vec<Matrix> = Vec::new();
+        let mut bias_updates: Vec<Matrix> = Vec::new();
 
         for layer in self.layers.iter_mut().rev() {
             let (weight_gradient, bias_gradient, input_gradient) =
@@ -106,14 +98,14 @@ impl Network {
     /// Gets the input for a specific layer.
     /// This is a placeholder for however you decide to implement it.
     #[must_use]
-    pub fn get_input_for_layer(&self, layer_index: usize) -> Array2<f64> {
-        // Return the input Array2<f64> for the specified layer.
+    pub fn get_input_for_layer(&self, layer_index: usize) -> Matrix {
+        // Return the input Matrix for the specified layer.
         self.layers[layer_index].input.clone()
     }
 
     #[must_use]
-    pub fn get_params(&self) -> Vec<Array2<f64>> {
-        let mut weights: Vec<Array2<f64>> = vec![];
+    pub fn get_params(&self) -> Vec<Matrix> {
+        let mut weights: Vec<Matrix> = vec![];
         for layer in &self.layers {
             let mut w = vec![layer.weights.data.clone()];
             weights.append(&mut w);
@@ -121,7 +113,7 @@ impl Network {
         weights
     }
 
-    pub fn load_params(self, params: Vec<Array2<f64>>) {
+    pub fn load_params(self, params: Vec<Matrix>) {
         for (i, mut layer) in self.layers.into_iter().enumerate() {
             layer.weights.data = params[i].clone();
         }
@@ -129,8 +121,8 @@ impl Network {
 }
 
 impl Predictor for Network {
-    type Input = Array2<f64>;
-    type Output = Array2<f64>;
+    type Input = Matrix;
+    type Output = Matrix;
 
     fn predict(&self, inputs: &Self::Input) -> Self::Output {
         self.layers
@@ -140,8 +132,8 @@ impl Predictor for Network {
 }
 
 impl Trainable for Network {
-    type Data = Array2<f64>;
-    type Target = Array2<f64>;
+    type Data = Matrix;
+    type Target = Matrix;
 
     /// Each loop in epoch, forward pass, calculate loss, backwards pass to calculate gradients
     /// Update parameters (using optimizer), repeat.
