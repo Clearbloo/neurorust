@@ -1,8 +1,10 @@
 pub mod activation;
 pub mod decision_tree;
+pub mod gradient;
 pub mod layer;
 pub mod loss;
-pub mod model;
-pub mod network;
+pub mod matrix;
+// pub mod network;
 pub mod optimizer;
+pub mod stage;
 pub mod utils;

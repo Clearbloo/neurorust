@@ -1,9 +1,9 @@
 use crate::{
     activation::Activation,
-    layer::{Dense, InitType},
+    layer::{Dense, InitType, Weight},
     loss::Metric,
-    model::{Predictor, Trainable},
     optimizer::Optimizer,
+    stage::{Predictor, Trainable},
     utils::Matrix,
 };
 use log::{debug, info};
@@ -12,7 +12,6 @@ use log::{debug, info};
 pub struct Network {
     layers: Vec<Dense>,
     loss: Metric,
-    optimizer: Optimizer,
     epochs: u32,
 }
 
@@ -22,7 +21,6 @@ impl Network {
         architecture: &[usize],
         activations: &[Activation],
         loss: Metric,
-        optimizer: Optimizer,
         epochs: u32,
     ) -> Self {
         let mut layers = Vec::new();
@@ -43,7 +41,6 @@ impl Network {
         Self {
             layers,
             loss,
-            optimizer,
             epochs,
         }
     }
@@ -100,22 +97,17 @@ impl Network {
     #[must_use]
     pub fn get_input_for_layer(&self, layer_index: usize) -> Matrix {
         // Return the input Matrix for the specified layer.
-        self.layers[layer_index].input.clone()
+        self.layers[layer_index].x.clone()
     }
 
     #[must_use]
-    pub fn get_params(&self) -> Vec<Matrix> {
-        let mut weights: Vec<Matrix> = vec![];
-        for layer in &self.layers {
-            let mut w = vec![layer.weights.data.clone()];
-            weights.append(&mut w);
-        }
-        weights
+    pub fn get_params(&self) -> Vec<&Weight> {
+        self.layers.iter().map(|l| &l.weights).collect()
     }
 
-    pub fn load_params(self, params: Vec<Matrix>) {
+    pub fn load_params(self, params: Vec<Weight>) {
         for (i, mut layer) in self.layers.into_iter().enumerate() {
-            layer.weights.data = params[i].clone();
+            layer.weights = params[i].clone();
         }
     }
 }
@@ -137,7 +129,12 @@ impl Trainable for Network {
 
     /// Each loop in epoch, forward pass, calculate loss, backwards pass to calculate gradients
     /// Update parameters (using optimizer), repeat.
-    fn train(&mut self, inputs: &Self::Data, targets: &Self::Target) -> impl Predictor {
+    fn train(
+        &mut self,
+        inputs: &Self::Data,
+        optimizer: impl Optimizer,
+        targets: &Self::Target,
+    ) -> impl Predictor {
         info!("Targets: {targets}");
         info!("Inputs: {inputs}");
         for e in 0..self.epochs {
@@ -155,8 +152,7 @@ impl Trainable for Network {
                 info!("Loss: {}", self.loss.calculate_loss(&outputs, targets));
                 info!("Outputs: {outputs}");
             }
-            self.optimizer
-                .apply_updates(&mut self.layers, &weight_updates, &bias_updates);
+            optimizer.apply_updates(&mut self.layers, &weight_updates, &bias_updates);
         }
         self.clone()
     }
@@ -164,7 +160,7 @@ impl Trainable for Network {
 #[cfg(test)]
 mod test_network {
     use super::*;
-    use crate::{activation::Activation, loss::Metric, utils::min_max_scale};
+    use crate::{activation::Activation, loss::Metric, optimizer::GD, utils::min_max_scale};
     use ctor::ctor;
     use log::debug;
     use ndarray::arr2;
@@ -182,7 +178,7 @@ mod test_network {
             &architecture_1,
             &activations,
             Metric::MSE,
-            Optimizer::Adam { lr: 0.001 },
+            GD { lr: 0.001 },
             1,
         );
 
@@ -194,7 +190,7 @@ mod test_network {
             &architecture_2,
             &activations_2,
             Metric::MSE,
-            Optimizer::Adam { lr: 0.001 },
+            GD { lr: 0.001 },
             1,
         );
 
@@ -207,19 +203,13 @@ mod test_network {
         let architecture = vec![1, 2, 1];
         let activations: Vec<Activation> =
             vec![Activation::LeakyReLU(0.1), Activation::LeakyReLU(0.1)];
-        let mut net = Network::new(
-            &architecture,
-            &activations,
-            Metric::MSE,
-            Optimizer::GD { lr: 0.1 },
-            50,
-        );
+        let mut net = Network::new(&architecture, &activations, Metric::MSE, GD { lr: 0.1 }, 50);
 
         let input = arr2(&[[1.0]]);
         let targets = arr2(&[[2.0]]);
         let y_hat1 = net.forward(&input);
 
-        net.train(&input, &targets);
+        net.train(&input, GD { lr: 0.01 }, &targets);
         let y_hat2 = net.forward(&input);
         assert_ne!(y_hat1, y_hat2);
     }
@@ -234,7 +224,7 @@ mod test_network {
             &architecture,
             &activations,
             Metric::MSE,
-            Optimizer::GD { lr: 0.01 },
+            GD { lr: 0.01 },
             1000,
         );
 
@@ -242,7 +232,7 @@ mod test_network {
         let targets = arr2(&[[2.0]]);
         let y1 = net.forward(&input);
 
-        net.train(&input, &targets);
+        net.train(&input, GD { lr: 0.01 }, &targets);
         let y2 = net.forward(&input);
         assert_ne!(y1, y2);
 
@@ -266,7 +256,7 @@ mod test_network {
             &architecture,
             &activations,
             Metric::MSE,
-            Optimizer::GD { lr: 0.1 },
+            GD { lr: 0.1 },
             1000,
         );
 
@@ -283,7 +273,7 @@ mod test_network {
         assert_eq!(y2.shape(), [1, 3], "Three inputs gives three outputs");
 
         // Train the network
-        net.train(&input, &targets);
+        net.train(&input, GD { lr: 0.01 }, &targets);
 
         // Capture the output after training
         let trained_output = net.forward(&input);

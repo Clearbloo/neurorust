@@ -21,6 +21,8 @@
               rustfmt
               pre-commit
               rustPackages.clippy
+
+              bacon
             ];
             RUST_SRC_PATH = rustPlatform.rustLibSrc;
           };

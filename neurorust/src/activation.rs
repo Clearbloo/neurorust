@@ -1,4 +1,4 @@
-use crate::utils::Matrix;
+use crate::{layer::Firing, utils::Matrix};
 use core::fmt::Debug;
 
 #[derive(Debug, Clone)]
@@ -11,7 +11,7 @@ pub enum Activation {
 
 impl Activation {
     #[must_use]
-    pub fn activate(&self, x: &Matrix) -> Matrix {
+    pub fn activate(&self, x: &Matrix<Firing>) -> Matrix<Firing> {
         match self {
             Self::Linear => x.clone(),
             Self::ReLU => relu(x),
@@ -22,7 +22,7 @@ impl Activation {
     /// Returns the gradient of the activation function. Same shape as the
     /// `output_gradient` parameter
     #[must_use]
-    pub fn calculate_derivative(&self, pre_activation_output: &Matrix) -> Matrix {
+    pub fn calculate_derivative(&self, pre_activation_output: &Matrix<Firing>) -> Matrix<Firing> {
         match self {
             Self::Linear => {
                 let x_dim = pre_activation_output.shape()[0];
@@ -37,27 +37,38 @@ impl Activation {
 }
 
 // Activation functions
-fn relu(input: &Matrix) -> Matrix {
-    input.mapv(|x| if x > 0.0 { x } else { 0.0 })
+fn relu(mut input: Matrix<Firing>) -> Matrix<Firing> {
+    input.0.mapv_inplace(|x| if x > 0.0 { x } else { 0.0 });
+    input
 }
 
-fn leaky_relu(input: &Matrix, slope: f64) -> Matrix {
-    input.mapv(|x| if x > 0.0 { x } else { slope * x })
+fn leaky_relu(mut input: Matrix<Firing>, slope: f64) -> Matrix<Firing> {
+    input
+        .0
+        .mapv_inplace(|x| if x > 0.0 { x } else { slope * x });
+    input
 }
 
-fn sigmoid(input: &Matrix) -> Matrix {
-    input.mapv(|x| 1.0 / (1.0 + (-x).exp()))
+fn sigmoid(mut input: Matrix<Firing>) -> Matrix<Firing> {
+    input.0.mapv_inplace(|x| 1.0 / (1.0 + (-x).exp()));
+    input
 }
 
-fn relu_derivative(relu_output: &Matrix) -> Matrix {
-    relu_output.mapv(|x| if x > 0.0 { 1.0 } else { 0.0 })
+fn relu_derivative(mut relu_output: Matrix<Firing>) -> Matrix<Firing> {
+    relu_output
+        .0
+        .mapv_inplace(|x| if x > 0.0 { 1.0 } else { 0.0 });
+    relu_output
 }
 
-fn leaky_relu_derivative(leaky_relu_output: &Matrix, slope: f64) -> Matrix {
-    leaky_relu_output.mapv(|x| if x > 0.0 { 1.0 } else { slope })
+fn leaky_relu_derivative(mut leaky_relu_output: Matrix<Firing>, slope: f64) -> Matrix<Firing> {
+    leaky_relu_output
+        .0
+        .mapv_inplace(|x| if x > 0.0 { 1.0 } else { slope });
+    leaky_relu_output
 }
 
-fn sigmoid_derivative(sigmoid_output: &Matrix) -> Matrix {
+fn sigmoid_derivative(sigmoid_output: &Matrix<Firing>) -> Matrix<Firing> {
     sigmoid_output * &(1.0 - sigmoid_output)
 }
 
@@ -70,7 +81,7 @@ mod test_activations {
     fn test_relu() {
         let relu = Activation::ReLU;
         let input = arr2(&[[1.0, -2.0], [2.0, -3.0]]);
-        let result = relu.activate(&input);
+        let result = relu.activate(input);
         assert_eq!(result, arr2(&[[1.0, 0.0], [2.0, 0.0]]));
 
         let act_grad = relu.calculate_derivative(&result);

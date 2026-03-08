@@ -1,6 +1,8 @@
 use crate::utils::Matrix;
 use ndarray::Zip;
 
+pub trait Loss {}
+
 /// Enum to represent different types of loss functions.
 #[derive(Debug, Clone)]
 pub enum Metric {
@@ -10,14 +12,14 @@ pub enum Metric {
 
 impl Metric {
     #[must_use]
-    pub fn calculate_loss(&self, predictions: &Matrix, targets: &Matrix) -> f64 {
+    pub fn calculate_loss<T>(&self, predictions: &Matrix<T>, targets: &Matrix<T>) -> f64 {
         match self {
             Self::MSE => mse(predictions, targets),
             Self::MAE => mae(predictions, targets),
         }
     }
     #[must_use]
-    pub fn calculate_gradient(&self, predictions: &Matrix, targets: &Matrix) -> Matrix {
+    pub fn calculate_gradient<T>(&self, predictions: &Matrix<T>, targets: &Matrix<T>) -> Matrix<T> {
         match self {
             Self::MSE => mse_gradient(predictions, targets),
             Self::MAE => mae_gradient(predictions, targets),
@@ -26,29 +28,29 @@ impl Metric {
 }
 
 #[allow(clippy::cast_precision_loss)]
-fn mse(predictions: &Matrix, targets: &Matrix) -> f64 {
-    let n = predictions.shape()[1] as f64;
-    Zip::from(predictions)
-        .and(targets)
+fn mse<T>(predictions: &Matrix<T>, targets: &Matrix<T>) -> f64 {
+    let n = predictions.as_ref().shape()[1] as f64;
+    Zip::from(predictions.as_ref())
+        .and(targets.as_ref())
         .fold(0.0, |acc, &pred, &target| {
             (pred - target).mul_add(pred - target, acc)
         })
         / n
 }
-fn mse_gradient(predictions: &Matrix, targets: &Matrix) -> Matrix {
-    let n = predictions.shape()[1] as f64;
-    2.0 * (predictions - targets) / n
+fn mse_gradient<T>(predictions: &Matrix<T>, targets: &Matrix<T>) -> Matrix<T> {
+    let n = predictions.as_ref().shape()[1] as f64;
+    Matrix::<T>::new(2.0 * (predictions.as_ref() - targets.as_ref()) / n)
 }
 
 #[allow(clippy::cast_precision_loss)]
-fn mae(predictions: &Matrix, targets: &Matrix) -> f64 {
+fn mae(predictions: &Matrix<T>, targets: &Matrix<T>) -> f64 {
     let n = predictions.shape()[1] as f64;
     Zip::from(predictions)
         .and(targets)
         .fold(0.0, |acc, &pred, &target| acc + (pred - target).abs())
         / n
 }
-fn mae_gradient(predictions: &Matrix, targets: &Matrix) -> Matrix {
+fn mae_gradient(predictions: &Matrix<T>, targets: &Matrix<T>) -> Matrix {
     let n = predictions.shape()[1] as f64;
     (predictions - targets).map(|x| x.signum() / n)
 }
